@@ -37,8 +37,38 @@ behind the AC indoor unit.
 - Failure action: notify Home Assistant. Later, HA turns the LG AC off over
   Wi-Fi. No relay.
 - Lid: 4× M3 screws into heat-set inserts.
-- Firmware: **Zephyr RTOS + MQTT + Home Assistant MQTT discovery**. The user
-  has existing projects in this style; ask for the path to one to reuse (Q13).
+- Firmware: **Zephyr RTOS + MQTT + Home Assistant MQTT discovery**.
+
+## Firmware environment (surveyed 2026-11-25; details in design.md §6.5)
+
+- The Zephyr environment is
+  `~/00_tmp/zephyr/introduction-to-zephyr` (repo `glmoritz/zephyr_container`).
+  - Its dev container builds `Dockerfile.moritz`: Zephyr 4.5.0-dev @
+    `fbfc5f19`, SDK 1.0.1.
+  - The current image is `vsc-introduction-to-zephyr-a5b93…`. Don't use
+    `env-zephyr-espressif:latest`, which is the old 4.3.0.
+  - The container mounts only `workspace/`. Product apps go in
+    `/workspace/projects/<name>`, each its own repo. Read
+    `workspace/AGENTS.md` there.
+- Verified in the image:
+  - the `riscv64-zephyr-elf` toolchain;
+  - the in-tree `esp32c3_supermini` board;
+  - the `adi,tmc2209` driver, which is **GPIO-only, no UART** → phase 1
+    standalone, phase 2 our own UART register module;
+  - the MQTT library.
+- The reference app is `workspace/projects/hello_eink`. Reuse from it:
+  - `modules/wifi_prov` (captive-portal provisioning);
+  - net/sys watchdogs, settings on NVS, the telnet shell and NTP;
+  - the `native_sim` dual target, to simulate the tank and control loop on the
+    host;
+  - the leak patches.
+
+  It has **no MQTT/HA code**, so that layer is new work unless the user points
+  to another project (Q13).
+- `workspace/scripts/zephyr-project.sh` hardcodes the Xtensa S3 gdb/gcc links,
+  so it needs to be generalised for the RISC-V C3.
+- Open: whether the firmware lives in `firmware/` in this repo (then
+  clone the repo into `workspace/projects/`) or in a separate repo (Q13).
 - PSU: a laptop PSU with no plug. Use a screw terminal or a soldered jack, with
   reverse-polarity protection and a fuse.
 - Parts on hand: ESP32-C3 SuperMini, TMC2209 (MakerHero), NEMA stepper (size

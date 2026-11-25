@@ -1,6 +1,6 @@
 # Quiet Condensate Peristaltic Pump — Design Document
 
-Status: **draft v0.2** (2026-11-25) — requirements and concept, before CAD.
+Status: **draft v0.3** (2026-11-25) — requirements and concept, before CAD.
 This file is the single source of truth for the project and will evolve until
 the working prototype. Values marked **[TBC]** are assumptions waiting for a
 measurement or confirmation; see [Open questions](#11-open-questions).
@@ -248,9 +248,15 @@ ESP32-C3 3V3 ──► TMC2209 VIO
   **reverse-polarity protection, a fuse and a TVS**.
 - **PSU voltage [TBC Q3]**: the TMC2209 accepts VM 4.75–29 V, so a 19–20 V
   laptop PSU is fine.
-- Run the TMC2209 in **UART mode**. It sets the current, StealthChop and
-  microsteps in software, and gives diagnostics: overtemperature, open load,
-  and StallGuard (only works at higher speed).
+- **TMC2209 mode, in two phases** (see section 6.5 for why):
+  - **Phase 1, standalone.** The upstream Zephyr driver is step/dir +
+    enable + microstep GPIOs only. Set the current with the module's VREF pot,
+    and strap MS1/MS2 for 16 µsteps (256 interpolated). StealthChop is the
+    standalone default when SPREAD is low **[TBC on the module, Q11]**.
+  - **Phase 2, UART.** Our own small register module adds software current
+    control, StealthChop tuning and diagnostics: overtemperature, open load,
+    and StallGuard (only works at higher speed). Wire PDN_UART to GPIO6/7 from
+    the start so phase 2 needs no rework.
 - The electronics are **inside a wall recess next to water**:
   - put the electronics box **above** the reservoir, never below it;
   - route cables with drip loops;
@@ -268,8 +274,8 @@ GPIO8, and the USB pins GPIO18/19.
 | 3 | TMC2209 STEP |
 | 4 | TMC2209 DIR |
 | 5 | TMC2209 EN (active low) |
-| 6 | TMC2209 UART TX → 1 kΩ → PDN_UART |
-| 7 | TMC2209 UART RX ← PDN_UART |
+| 6 | TMC2209 UART TX → 1 kΩ → PDN_UART (used from phase 2) |
+| 7 | TMC2209 UART RX ← PDN_UART (used from phase 2) |
 | 10 | TMC2209 DIAG |
 | 20 | Local buzzer (optional, alarm also goes to HA) |
 | 21 | Spare: 3rd "overflow" sensor (Q12) or push button (manual purge / test) |
@@ -351,22 +357,82 @@ DRAIN  : q_p = k_hi · q̂_in   (k_hi ≈ 1.25)  level falls  H→L in t_down
 
 ### 6.5 Firmware: Zephyr + MQTT + Home Assistant discovery
 
-This follows the same pattern as the user's existing Zephyr/MQTT/HA projects.
-Reuse their structure (Q13).
+#### Toolchain and workspace
 
-- **Board**: ESP32-C3 SuperMini. Check whether the Zephyr version has a board
-  definition for it. Otherwise use an `esp32c3_devkitm`-based board plus an
-  overlay.
-- **Stepper**: the Zephyr stepper subsystem has an ADI TMC22xx step/dir driver
-  (`adi,tmc2209`). Verify what the chosen Zephyr version supports. Register
-  configuration over UART (current, StealthChop, diagnostics) may need a small
-  driver of our own.
-- **Step generation**: speeds are low (< 10 kHz), so a hardware timer or the
-  RMT/LEDC peripheral is enough. Avoid jitter at low speed, because jitter is
-  audible.
-- **Discovery**: MQTT discovery publishes retained configs to
-  `homeassistant/<component>/<node_id>/<object_id>/config`, with an
-  availability topic and LWT.
+The firmware reuses the user's Zephyr environment: the course container repo
+at `~/00_tmp/zephyr/introduction-to-zephyr`, which was surveyed on 2026-11-25.
+
+- **Dev container**: `.devcontainer` builds `Dockerfile.moritz`, which pins
+  **Zephyr 4.5.0-dev @ `fbfc5f19`** with SDK 1.0.1. The newest local image,
+  `vsc-introduction-to-zephyr-a5b93…` from 2026-05-28, was verified to have:
+  - the **`riscv64-zephyr-elf`** toolchain, which the ESP32-C3 needs because it
+    is RISC-V, not Xtensa;
+  - the in-tree board **`esp32c3_supermini`** (`boards/others/`);
+  - the **`adi,tmc2209`** stepper driver under the new split API
+    (`stepper.h` + `stepper_ctrl.h`, step/dir in `drivers/stepper/step_dir`);
+  - the **MQTT** client library (`subsys/net/lib/mqtt`).
+
+  The older `env-zephyr-espressif:latest` image is Zephyr 4.3.0, so don't use
+  it.
+- **Workspace convention** (from the repo's `workspace/AGENTS.md`):
+  - product apps live in `/workspace/projects/<name>`, each its own git repo;
+  - shared manifest `/workspace/west.yml`;
+  - the helper `/workspace/scripts/zephyr-project.sh set|build|flash|openocd`;
+  - a per-project `.board` file and optional `debug.conf`;
+  - app-owned `boards/`, `modules/` and `patches/`.
+- `zephyr-project.sh` **hardcodes the Xtensa ESP32-S3 gdb/gcc symlinks** and
+  will need to be generalised for RISC-V (C3) gdb and OpenOCD.
+- **Where the firmware lives [TBC Q13]**: the container only mounts
+  `workspace/`. Recommendation: keep the firmware in this repo under
+  `firmware/`, and clone this repo to `workspace/projects/peristaltic_pump`
+  (or add a bind mount).
+
+#### Reuse from `hello_eink`
+
+`hello_eink` (`workspace/projects/hello_eink`, repo
+`glmoritz/zephyr_eink_waveshare`) is the reference app:
+
+- **`modules/wifi_prov`**: Wi-Fi provisioning by captive portal, with
+  credentials in NVS. API: `wifi_prov_init(cb)` / `start()` / `get_state()`.
+  Reuse it as-is.
+- `net_watchdog` (escalating self-heal for connectivity) and `sys_watchdog`.
+  Use the same pattern for MQTT connectivity.
+- Settings on NVS, the telnet shell backend (debugging without a USB cable),
+  and NTP sync (needed for night mode).
+- **Dual target `native_sim`**: the same `src/` builds for Linux. For the
+  pump this is ideal: a simulated tank (inflow profile + pump + two
+  thresholds) can exercise the whole control state machine on the host before
+  any hardware exists.
+- **Long-uptime network fixes**: the repo carries patches for socket recvq
+  close-race and IPv6 NS netbuf leaks (`sockets_inet_recvq_close_race_leak.patch`,
+  `pr_*.md`). The pump runs 24/7 on MQTT, so check whether they are upstream at
+  the pinned commit and carry them if not.
+- **No MQTT / HA-discovery code exists there.** `hello_eink` talks HTTP to
+  LLSS. The MQTT + HA discovery layer is new work, unless the user points to
+  another project (Q13).
+
+#### Stepper
+
+The upstream `adi,tmc2209` driver is **GPIO-only**: enable, step, dir, and
+m0/m1 microstep pins. It has **no UART register access**. Hence the two-phase
+plan in section 5.1:
+
+- **Phase 1**: VREF pot + strapped microsteps.
+- **Phase 2**: a small app-owned module that sends TMC2209 UART datagrams
+  (single-wire, 8-byte write / 4+8-byte read, CRC8) for IRUN/IHOLD, CHOPCONF,
+  PWMCONF, DRV_STATUS, SG_RESULT.
+
+**Step timing**: use the step_dir **counter-based timing source** (ESP32-C3
+timer group) rather than work-queue timing. Speeds are < 10 kHz, but jitter at
+2–20 RPM is audible.
+
+#### MQTT + Home Assistant discovery
+
+- Discovery publishes retained configs to
+  `homeassistant/<component>/<node_id>/<object_id>/config`.
+- The availability topic uses LWT (`online` / `offline`).
+- State is published as JSON on a single state topic. Commands come from
+  `.../set` topics.
 
 Proposed entities:
 
@@ -452,7 +518,7 @@ Proposed entities:
 | Q5 | Hose | 4×7 silicone hose runs **continuously to the drain** |
 | Q7 | Failure action | **Notify Home Assistant**. Later: HA automation turns the LG AC off via its Wi-Fi |
 | Q8 | Lid fixing | **4× M3 screws** into heat-set inserts |
-| Q9 | Firmware | **Zephyr + MQTT + HA MQTT discovery** |
+| Q9 | Firmware | **Zephyr + MQTT + HA MQTT discovery**, built in the existing `introduction-to-zephyr` dev container (Zephyr 4.5.0-dev @ fbfc5f19) |
 
 ### Still open (needs measuring — parts are not at hand yet)
 
@@ -463,9 +529,9 @@ Proposed entities:
 | Q3 | **Laptop PSU**: label voltage and current | Input protection rating, TMC VM |
 | Q6 | **Bearings**: confirm 608 (8×22×7) | Rotor design |
 | Q10 | **Wall recess**: W × H × D, where the AC drain hose enters, where the drain outlet is, how it is accessed for maintenance | Overall envelope, #1 CAD input |
-| Q11 | **TMC2209 module**: version (BTT v1.3/v2/v3/generic), is UART pre-bridged | UART wiring |
+| Q11 | **TMC2209 module**: version (BTT v1.3/v2/v3/generic), is UART pre-bridged, how SPREAD and MS1/MS2 are strapped on the board | Phase 1 standalone strapping, phase 2 UART wiring |
 | Q12 | Add a 3rd sensor or a float switch as an independent overflow input? | No hardware AC cut-off exists, so an overflow spills inside the wall |
-| Q13 | Which existing Zephyr/MQTT/HA project should be used as the firmware template (repo path)? | Reuse structure, board config, MQTT/discovery code |
+| Q13 | Is there an existing project with **MQTT + HA discovery** code? (`hello_eink` has none; it uses HTTP/LLSS.) And where should the firmware live: `firmware/` in this repo, cloned into `workspace/projects/`, or a separate repo? | Reuse vs new MQTT/HA module; container mount |
 | Q14 | AC drain hose: ID/OD where it enters the reservoir lid | Inlet fitting |
 | — | Masterflow 20: caliper-confirm the values in section 4.6 | Reference envelope |
 
@@ -475,3 +541,4 @@ Proposed entities:
 |------|---------|--------|
 | 2026-11-25 | 0.1 | First draft: requirements, sizing, concept, control strategy, open questions |
 | 2026-11-25 | 0.2 | User decisions recorded (printed reservoir, continuous hose, HA notification, M3 lid, Zephyr/MQTT/HA). Unit mounts in the wall recess behind the AC → envelope and overflow concerns. PSU input protection. Masterflow dimensions read from `pump_dimensions.png`. HA entity list |
+| 2026-11-25 | 0.3 | Surveyed the user's Zephyr environment (`introduction-to-zephyr`, `hello_eink`). Verified the C3 toolchain, board and TMC2209 driver in the dev container image. The TMC2209 driver is GPIO-only → two-phase plan (standalone, then own UART module). Reuse list (wifi_prov, watchdogs, native_sim tank simulation, leak patches) |
