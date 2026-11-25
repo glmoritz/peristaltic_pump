@@ -579,8 +579,11 @@ Proposed entities:
      and torque.
   2. Reservoir.
   3. Electronics enclosure.
-- **CAD is blocked on measurements**: motor (Q1), bearings (Q6), recess
-  envelope (Q10). The sensor and hose dimensions are already known.
+- **CAD status**:
+  - known: bearings, frame size, hose, sensors, reservoir baseline;
+  - **still blocking the motor mount and hub**: the motor hole spacing, pilot
+    boss and shaft (Q1). The track and rotor test print can start using an
+    assumed Ø5 shaft.
 
 ## 11. Open questions
 
