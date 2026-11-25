@@ -35,7 +35,7 @@ behind the AC indoor unit.
 - If the motor is too weak, **the user will buy a NEMA 17**. Keep the mount,
   the base pocket (42.3 mm) and the hub insert swappable.
 - **The CAD is unblocked.** Nice to have: coil resistance (Q1), sensor variant
-  (Q2), PSU label (Q3), driver pin labels (Q11).
+  (Q2), driver pin labels (Q11).
 - **The wall stays closed for now** (Q10 deferred). The envelope baseline is
   the Masterflow **square reservoir**, about 87 × ~78 × 42 mm (48.5 mm with
   the spigot); see design.md §4.6. The pump head is a separate block joined
@@ -91,8 +91,9 @@ behind the AC indoor unit.
   so it needs to be generalised for the RISC-V C3.
 - Open: whether the firmware lives in `firmware/` in this repo (then
   clone the repo into `workspace/projects/`) or in a separate repo (Q13).
-- PSU: a laptop PSU with no plug. Use a screw terminal or a soldered jack, with
-  reverse-polarity protection and a fuse.
+- PSU: a laptop PSU, **19 V 2.1 A, brick 90 × 37 × 26 mm**, with no plug. Use
+  a screw terminal or a soldered jack, with reverse-polarity protection, a 1 A
+  fuse, an SMBJ22A TVS, and an MP1584 buck to 5 V.
 - Parts on hand: ESP32-C3 SuperMini, TMC2209 (MakerHero), NEMA stepper (size
   TBC), 10 skateboard bearings (608 TBC), 2 non-contact level sensors
   (AliExpress), 4×7 mm silicone hose.

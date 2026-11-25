@@ -1,6 +1,6 @@
 # Quiet Condensate Peristaltic Pump — Design Document
 
-Status: **draft v0.6** (2026-11-25) — requirements and concept, before CAD.
+Status: **draft v0.7** (2026-11-25) — requirements and concept, before CAD.
 This file is the single source of truth for the project and will evolve until
 the working prototype. Values marked **[TBC]** are assumptions waiting for a
 measurement or confirmation; see [Open questions](#11-open-questions).
@@ -29,7 +29,7 @@ measurement or confirmation; see [Open questions](#11-open-questions).
 | R4 | Noise | inaudible at night in the bedroom: no on/off cycling, no gurgling, no vibration transmitted into the wall |
 | R5 | Maintenance | open with 4× M3 screws; clean algae, swap hose, oil bearings |
 | R6 | Fail-safe | detect pump failure / overflow risk and **notify Home Assistant**. A future HA automation turns the LG AC off (via its Wi-Fi) |
-| R7 | Power | laptop power supply (no plug: screw terminal or soldered jack) |
+| R7 | Power | laptop power supply, **19 V 2.1 A**, 90 × 37 × 26 mm brick (no plug: screw terminal or soldered jack) |
 | R8 | Envelope | must fit the wall recess behind the AC **[TBC: measure recess]**, reference is the Masterflow 20 footprint (section 4.6) |
 | R9 | Use parts already bought | 608-type skateboard bearings (10 pcs), TMC2209, NEMA stepper, ESP32-C3 SuperMini, 2× non-contact level sensors, silicone hose 4 × 7 mm |
 | R10 | Firmware | **Zephyr RTOS**, MQTT, Home Assistant MQTT discovery (same pattern as the user's existing projects) |
@@ -328,12 +328,12 @@ If the space is tight, the options are:
 ### 5.1 Block diagram
 
 ```
-Laptop PSU (19–20 V, bare wires) ─► screw terminal ─► fuse 1 A ─► reverse-polarity
+Laptop PSU (19 V 2.1 A, bare wires) ─► screw terminal ─► fuse 1 A ─► reverse-polarity
                                                                   protection (P-MOSFET or SS34)
-                                                                  + TVS (SMBJ24A)
+                                                                  + TVS (SMBJ22A)
                      ┌────────────────────────────────────────────────┘
                      ├──► TMC2209 VM (+100 µF/35 V electrolytic at the module)
-                     └──► buck 5 V (MP1584 / mini-360) ──► ESP32-C3 SuperMini 5V pin
+                     └──► buck 5 V (MP1584) ──► ESP32-C3 SuperMini 5V pin
                                                      └──► level sensors V+ (if 5 V-capable)
 ESP32-C3 3V3 ──► TMC2209 VIO
 ```
@@ -341,8 +341,17 @@ ESP32-C3 3V3 ──► TMC2209 VIO
 - **PSU input**: the PSU has no plug. Use a screw terminal, or optionally solder
   a DC jack later. Because bare wires can be swapped by mistake, the input has
   **reverse-polarity protection, a fuse and a TVS**.
-- **PSU voltage [TBC Q3]**: the TMC2209 accepts VM 4.75–29 V, so a 19–20 V
-  laptop PSU is fine.
+- **PSU (measured 2026-11-25): 19 V, 2.1 A (40 W), brick 90 × 37 × 26 mm.**
+  - 19 V is well inside the TMC2209 VM range (4.75–29 V).
+  - The load is < 6 W, so the brick runs at about 15 % load: cool and silent.
+  - **Buck**: use an **MP1584** (28 V max input). Avoid the mini-360: its
+    23 V max input leaves too little margin above 19 V.
+  - **TVS**: **SMBJ22A** (22 V standoff, 24.4 V breakdown). It sits above
+    19 V and below the TMC2209's 29 V absolute maximum for normal transients.
+  - **Fuse**: 1 A, slow-blow.
+  - **Brick placement**: it needs a spot in or near the recess. Its 90 × 37 ×
+    26 mm and its mains cord are part of the envelope (Q10). Keep it apart
+    from the reservoir, and **above** any possible water.
 - **TMC2209 mode, in two phases** (see section 6.5 for why):
   - **Phase 1, standalone.** The upstream Zephyr driver is step/dir +
     enable + microstep GPIOs only.
@@ -629,6 +638,7 @@ Proposed entities:
 | Q8 | Lid fixing | **4× M3 screws** into heat-set inserts |
 | Q9 | Firmware | **Zephyr + MQTT + HA MQTT discovery**, built in the existing `introduction-to-zephyr` dev container. Zephyr will be **upgraded** (not frozen at 4.5.0-dev @ fbfc5f19) |
 | Q13a | MQTT/HA code | **Written new** for this project (no existing code to reuse). Deferred, not now |
+| Q3 | PSU | **19 V, 2.1 A**, brick 90 × 37 × 26 mm → MP1584 buck, SMBJ22A TVS, 1 A fuse |
 | Q6 | Bearings | **608 confirmed** (22 × 7 × 8 mm), 10 pcs |
 | Q10a | Reservoir envelope | Baseline = the Masterflow **square reservoir**, ≈ 87 × ~78 × 42 (48.5 with spigot) mm. The wall stays closed for now |
 
@@ -638,7 +648,6 @@ Proposed entities:
 |---|----------|----------------|
 | Q1 | **Motor** (frame 38 × 38, body 33 mm, holes 31 mm square, hub Ø16.8 × 11 with set screw, **no rating label**; all measured). Still useful: **coil resistance** (to estimate rated current), mount screw thread (M3?), pilot boss Ø | VREF setting; the CAD uses clearances meanwhile |
 | Q2 | **Sensor**: output variant (NPN/PNP/V/RS485), supply range, model number on the label; caliper check of the drawing | Interface circuit, wall thickness |
-| Q3 | **Laptop PSU**: label voltage and current | Input protection rating, TMC VM |
 | Q10 | **Wall recess** (deferred, the wall is not being opened now): W × H × D, where the AC drain hose enters, where the drain outlet is, how it is accessed for maintenance, and whether a **taller reservoir** fits | Final envelope, overflow margin, pump head placement |
 | Q11 | **TMC2209 module** (16-pin StepStick with micropot, known). Still needed: the pin labels printed on it (is it `PDN`/`UART` or `RX`/`TX`?), any extra pins on top (DIAG/INDEX), the brand/version printed on it, and the sense resistor marking (R100/R110) | VREF formula, phase 2 UART wiring, DIAG availability |
 | Q12 | Add a 3rd sensor or a float switch as an independent overflow input? | No hardware AC cut-off exists, so an overflow spills inside the wall |
@@ -656,3 +665,4 @@ Proposed entities:
 | 2026-11-25 | 0.4 | Masterflow square reservoir (≈ 87 × ~78 × 42 mm) adopted as the envelope baseline. Wall recess deferred. Height/overflow budget computed. Pump head becomes a separate block. Zephyr to be upgraded. MQTT/HA layer to be written new, deferred |
 | 2026-11-25 | 0.5 | Measured: motor 38 × 38 × 33 mm (39 mm class, thin torque margin), bearings 608 confirmed, driver is a 16-pin StepStick with micropot. Rotor pitch radius reduced 20 → 16 mm (V_rev ≈ 1.7 mL/rev). Torque mitigations and test procedure. VREF/microstep notes for standalone mode. Pump head ≈ 70 × 70 × 65 mm |
 | 2026-11-25 | 0.6 | Motor: 31 mm hole pattern (NEMA 17-compatible), Ø16.8 × 11 mm hub on the shaft, no rating (estimate from coil resistance plus bench tuning). Interchangeable clamp hub insert; mount and base sized so a NEMA 17 can drop in if needed (user decision). CAD unblocked |
+| 2026-11-25 | 0.7 | PSU: 19 V 2.1 A, 90 × 37 × 26 mm brick. Buck fixed to MP1584, TVS changed to SMBJ22A, brick added to the envelope |
