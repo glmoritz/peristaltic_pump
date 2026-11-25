@@ -1,0 +1,11 @@
+# FreeCAD backups
+*.FCBak
+*.FCStd1
+*.FCStd2
+# Build / export scratch
+__pycache__/
+*.pyc
+build/
+# Zephyr / west
+.west/
+twister-out*/
