@@ -1,6 +1,6 @@
 # Quiet Condensate Peristaltic Pump — Design Document
 
-Status: **draft v0.7** (2026-11-25) — requirements and concept, before CAD.
+Status: **draft v0.8** (2026-11-25) — requirements, concept and CAD v1 (see `cad/`).
 This file is the single source of truth for the project and will evolve until
 the working prototype. Values marked **[TBC]** are assumptions waiting for a
 measurement or confirmation; see [Open questions](#11-open-questions).
@@ -71,8 +71,8 @@ the small motor (section 3.3). It is the practical minimum:
 - the M8 axle sits 9.5 mm from the Ø5 shaft.
 
 ```
-V_rev ≈ A · 2π · r_hose = 12.57 · 2π · 27 ≈ 2.13 mL/rev (theoretical)
-V_rev ≈ 1.7 mL/rev (assumed ~80 % efficiency, to be calibrated)
+V_rev ≈ A · 2π · r_hose = 12.57 · 2π · 28.3 ≈ 2.2 mL/rev (theoretical, r at mid-gap)
+V_rev ≈ 1.8 mL/rev (assumed ~80 % efficiency, to be calibrated)
 ```
 
 | Flow | Rotor speed | Step rate (200 steps/rev, 16 µsteps) |
@@ -180,21 +180,27 @@ low), the step rates halve. The chip interpolates to 256 µsteps either way.
 
 ### 4.2 Pump head
 
-- **Rotor**: two printed discs that sandwich **3× 608 bearings** (8×22×7,
-  confirmed) at a **16 mm pitch radius**, on M8 bolts, or on M4 bolts with
-  printed Ø8 sleeves. Three rollers keep at least one roller occluding at all
-  times.
-- **Rotor-to-motor interface**: an **interchangeable hub insert** so the motor
-  can change without reprinting the rotor discs.
-  - **Current motor**: the insert **clamps around the existing Ø16.8 × 11 mm
-    hub**. It has a Ø17.0 bore, a slit, and an M3 pinch bolt with a captive
-    nut, so nothing has to come off the motor. The insert is 11 mm deep, so the
-    rotor sits on the hub, not on the bare shaft.
-  - Alternative: remove the existing hub (loosen its set screw), measure the
-    bare shaft, and use a shaft insert.
-  - **NEMA 17 (future)**: an insert for a Ø5 D-shaft with an M3 grub screw and
-    captive nut. We have 10 bearings: 3 rollers +
-  1 lid support bearing + 6 spares.
+- **Rotor** (as modelled in `cad/pump.py`):
+  - two printed discs, Ø57, whose rims act as flanges that keep the hose
+    centred;
+  - **3 rollers of 2 stacked 608 bearings each (14 mm wide)**, because a single
+    608 is 7 mm wide and a flattened 4×7 hose is ~9–10 mm wide. This uses
+    **6 of the 10 bearings**;
+  - rollers at a **16 mm pitch radius**, each riding on a **printed Ø8 sleeve
+    over an M4 countersunk bolt**. The bolt goes through the upper disc into an
+    M4 heat-set insert in the lower disc;
+  - a sleeve flange at the bottom and a boss under the upper disc clamp only
+    the bearings' inner races;
+  - three rollers keep at least one roller occluding at all times.
+- **Rotor-to-motor interface**: the hub is part of the **lower rotor disc**,
+  with two variants generated from the same script. Changing the motor means
+  reprinting only this one part (~20 g).
+  - **`rotor_lower_stock`**: a Ø17.1 bore that slides over the existing
+    Ø16.8 × 11 mm hub on the motor shaft. It is held by **2 radial M3 grub
+    screws** with captive nuts, so nothing has to come off the motor.
+  - **`rotor_lower_nema17`**: a Ø5 D-shaft bore with 1 grub screw on the flat.
+  - The grub screws are reached through a Ø4 access hole in the -y wall: turn
+    the rotor until a screw faces it.
 - **Track**: a U-shaped track printed into the base, with about 180° plus
   2× 30° of wrap.
   - Track inner radius = roller outer radius + occlusion gap.
@@ -230,7 +236,7 @@ low), the step rates halve. The chip interpolates to 256 µsteps either way.
 - Sensor faces need **flat walls about 2 mm thick**.
   - Mount L and H on **different faces**, or **offset sideways**. Each sensor is
     24 mm tall, so they cannot be stacked closer than that on the same line.
-- The sloped floor drains to the pickup, so no stagnant puddles grow algae.
+- The floor is flat with no sump; a sump would cost overflow height. The pickup is a strainer cage in the corner nearest the pump (section 4.7).
 - **Overflow margin is critical.** There is no hardware AC cut-off for now, only
   an HA notification plus a future HA automation, and an overflow would spill
   *inside the wall*. Keep as much volume as possible **above H**. Consider a
@@ -322,6 +328,39 @@ If the space is tight, the options are:
    only by hose.
 2. Use a smaller rotor (r ≈ 20 mm) or a NEMA 14 with a belt reduction.
 3. Use a pancake NEMA 17 (≈ 20–25 mm long), if the torque is enough.
+
+### 4.7 Reservoir as modelled (v1, `cad/reservoir.py`)
+
+- **Box**: 87 × 78 × 40 mm with 2 mm walls and a 2.4 mm floor. The lid is a
+  flat 3 mm plate with no lip, so it prints flat with its collars up. It is
+  located and held by 4× M3 into heat-set inserts in the inside corner
+  columns.
+- **Outside size**: sensor bosses and clips add ~9.5 mm on the -y and +x
+  faces, so the overall size is about 94 × 85 × 53 mm including the lid
+  collars.
+- **Pickup**: the silicone hose comes **down through a grip collar in the
+  lid** (Ø6.8 on a 7 mm hose). It plugs into a **printed strainer cage**
+  (Ø16 × 14, 6 slots of 1.5 mm, open at floor level) that sits in a locator
+  ring in the (+x, -y) corner, nearest the pump.
+  - There is **no fitting below the water line, so there is no leak path**.
+- **AC inlet**: a Ø20 hole with an 8 mm collar in the lid. The AC drain hose
+  just drops in (Q14).
+- **Vent**: Ø3 in the lid.
+- **Sensors**:
+  - **L on the -y wall, H on the +x wall**, each pressed flat against the
+    2 mm wall by a **printed clip**;
+  - each clip has 2× M3 screws into heat-set inserts in **blind** bosses, so
+    the wall is not pierced;
+  - the clips have vertical slots for **±5 mm of trip-height adjustment**;
+  - the trip lines are at **13 mm (L)** and **24 mm (H)** above the inside
+    floor.
+- **Volumes**, computed from the model:
+
+| Zone | Volume | Meaning |
+|------|--------|---------|
+| floor → L | 77 mL | always wet. It is renewed continuously by the inflow, but it is the algae zone, so clean it periodically |
+| L → H | **65 mL** | the measuring cup: a half cycle takes 13 min at 1.5 L/h, 20 min at 1 L/h, 39 min at 0.5 L/h (±20 % offset) |
+| H → lid | **81 mL** | **overflow margin ≈ 3.2 min at 1.5 L/h with a dead pump** → `T_fail` must be short, and a taller box helps if the recess allows |
 
 ## 5. Electronics
 
@@ -613,18 +652,20 @@ Proposed entities:
   with one `params.py`) that generates the `.FCStd` files plus STEP and STL
   exports. Every dimension in this document becomes a named parameter, so
   changing the hose, motor, bearing or occlusion gap is a one-line edit.
-- Parts: `base_track`, `rotor_disc` ×2, `rotor_hub`, `lid`, `hose_clamp` ×2,
-  `reservoir`, `reservoir_lid`, `sensor_bracket` (if needed), `electronics_box`.
+- Parts and print/assembly instructions: see **`cad/README.md`**.
 - Order of work:
-  1. Pump head plus a test print of only the track and rotor to tune occlusion
-     and torque.
-  2. Reservoir.
-  3. Electronics enclosure.
-- **CAD status**:
-  - known: bearings, frame size, hose, sensors, reservoir baseline;
-  - **the CAD can start now**: the hole pattern and the hub are known;
-  - remaining small unknowns are covered with clearance: the pilot boss Ø
-    (pocket Ø23) and the mount screw thread (assume M3).
+  1. Pump head, **done (v1, 2026-11-25)**. First print: base, rotor, and the
+     3 track inserts, to tune occlusion and torque.
+  2. Reservoir, **done (v1, 2026-11-25)**.
+  3. Electronics enclosure, still to do.
+- **CAD assumptions to verify on the bench** (all are parameters in
+  `cad/params.py`):
+  - `STOCK_HUB_Z0` = 1.0: gap between the motor face and the bottom of the
+    Ø16.8 hub. **Measure motor face → top of hub**; the model assumes 12.0.
+  - Heat-set insert hole sizes (M3 Ø4.0 × 6, M4 Ø5.6 × 5): check the brand of
+    the inserts.
+  - `SENSOR_SENSE_FROM_BOTTOM` = 12: where the sensor's trip line actually is.
+    The clip slots give ±5 mm of adjustment anyway.
 
 ## 11. Open questions
 
@@ -666,3 +707,4 @@ Proposed entities:
 | 2026-11-25 | 0.5 | Measured: motor 38 × 38 × 33 mm (39 mm class, thin torque margin), bearings 608 confirmed, driver is a 16-pin StepStick with micropot. Rotor pitch radius reduced 20 → 16 mm (V_rev ≈ 1.7 mL/rev). Torque mitigations and test procedure. VREF/microstep notes for standalone mode. Pump head ≈ 70 × 70 × 65 mm |
 | 2026-11-25 | 0.6 | Motor: 31 mm hole pattern (NEMA 17-compatible), Ø16.8 × 11 mm hub on the shaft, no rating (estimate from coil resistance plus bench tuning). Interchangeable clamp hub insert; mount and base sized so a NEMA 17 can drop in if needed (user decision). CAD unblocked |
 | 2026-11-25 | 0.7 | PSU: 19 V 2.1 A, 90 × 37 × 26 mm brick. Buck fixed to MP1584, TVS changed to SMBJ22A, brick added to the envelope |
+| 2026-11-25 | 0.8 | **CAD v1**: parametric FreeCAD scripts for the pump head and reservoir (`cad/`). Rollers = 2 stacked 608 each (hose wider than one bearing). Motor interface integrated into the lower rotor disc (stock / NEMA 17 variants). Reservoir: flat floor + strainer cage, dip-tube pickup through the lid, clip-mounted sensors at 13 / 24 mm, volumes computed |

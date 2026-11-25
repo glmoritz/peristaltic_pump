@@ -19,7 +19,22 @@ behind the AC indoor unit.
 
 ## State (2026-11-25)
 
-- Phase: **documentation done (v0.2). CAD not started.**
+- Phase: **CAD v1 done** for the pump head and the reservoir (`cad/`; see
+  `cad/README.md`). Nothing has been printed yet. Design doc v0.8.
+- Build all CAD with `cad/build.sh` (headless FreeCAD). It regenerates
+  STL/STEP/FCStd and the preview PNGs into `cad/out/` and runs the
+  interference checks. Edit dimensions only in `cad/params.py`.
+- CAD facts that are easy to forget:
+  - each roller = **2 stacked 608** (14 mm), because the hose is wider than
+    one bearing;
+  - the motor interface is part of the lower rotor disc, with `stock` and
+    `nema17` variants;
+  - there are 3 track inserts (gaps 2.4 / 2.6 / 2.8);
+  - the reservoir has a dip-tube pickup through the lid, a strainer cage,
+    clip-mounted sensors at 13 / 24 mm, and **~3 min overflow margin**.
+- CAD assumptions to verify on the bench: `STOCK_HUB_Z0` (measure motor face
+  → top of hub; 12.0 is assumed), the heat-set insert hole sizes, and the
+  sensor trip line.
 - Measured so far:
   - **motor 38 × 38 × 33 mm**: 39 mm class, so the torque margin is thin
     → the rotor pitch radius was reduced to 16 mm; see design.md §3.3;
@@ -46,11 +61,12 @@ behind the AC indoor unit.
     re-verify the board, the TMC2209 driver and the stepper API on the new
     version.
 - Next steps:
-  1. Collect the measurements and update design.md.
-  2. Write the parametric FreeCAD scripts in `cad/`: pump head first, then a
-     test print of the track and rotor for occlusion tuning, then the reservoir,
-     then the electronics box.
-  3. Firmware, in its own folder or repo.
+  1. The user prints and tests the pump head (torque test, choose the gap
+     insert) and the reservoir (watertightness). Feed the results back into
+     `params.py` and design.md.
+  2. The electronics enclosure (CAD), once the buck, driver and ESP32 layout is
+     settled.
+  3. Firmware (deferred): a new MQTT/HA layer, after the Zephyr upgrade.
 
 ## Decisions already made by the user (don't re-ask)
 
