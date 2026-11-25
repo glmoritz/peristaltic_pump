@@ -25,9 +25,17 @@ behind the AC indoor unit.
     → the rotor pitch radius was reduced to 16 mm; see design.md §3.3;
   - **bearings 608 confirmed**;
   - **driver: 16-pin StepStick with micropot**.
-- Still needed before the CAD: the motor hole spacing, pilot boss and shaft
-  (Q1). Nice to have: the sensor variant (Q2), PSU label (Q3) and the driver
-  pin labels (Q11).
+- Motor details:
+  - **31 mm square hole pattern** (43.5 mm diagonal), which is
+    NEMA 17-compatible;
+  - a **Ø16.8 × 11 mm hub with a set screw** on the shaft → the rotor uses an
+    interchangeable clamp hub insert;
+  - **no current rating** → estimate it from the coil resistance and tune on
+    the bench.
+- If the motor is too weak, **the user will buy a NEMA 17**. Keep the mount,
+  the base pocket (42.3 mm) and the hub insert swappable.
+- **The CAD is unblocked.** Nice to have: coil resistance (Q1), sensor variant
+  (Q2), PSU label (Q3), driver pin labels (Q11).
 - **The wall stays closed for now** (Q10 deferred). The envelope baseline is
   the Masterflow **square reservoir**, about 87 × ~78 × 42 mm (48.5 mm with
   the spigot); see design.md §4.6. The pump head is a separate block joined

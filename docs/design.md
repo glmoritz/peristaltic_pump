@@ -1,6 +1,6 @@
 # Quiet Condensate Peristaltic Pump — Design Document
 
-Status: **draft v0.5** (2026-11-25) — requirements and concept, before CAD.
+Status: **draft v0.6** (2026-11-25) — requirements and concept, before CAD.
 This file is the single source of truth for the project and will evolve until
 the working prototype. Values marked **[TBC]** are assumptions waiting for a
 measurement or confirmation; see [Open questions](#11-open-questions).
@@ -100,8 +100,24 @@ low), the step rates halve. The chip interpolates to 256 µsteps either way.
 - **Motor (measured 2026-11-25): 38 × 38 mm frame, 33 mm body.** This is
   neither a NEMA 14 (35.2 mm) nor a NEMA 17 (42.3 mm). It is most likely a
   **39 mm-class ("NEMA 16", e.g. 39BYG) motor**, typically
-  **≈ 0.15–0.25 N·m holding torque** at this length. Rated current, hole
-  pattern and shaft are **[TBC Q1]**.
+  **≈ 0.15–0.25 N·m holding torque** at this length.
+  - **Mounting holes**: 43.5 mm on the diagonal → **31 mm square pattern**.
+    That is the *same pattern as a NEMA 17*.
+  - **Output**: a smooth cylindrical hub, **Ø16.8 × 11 mm**, with a radial set
+    screw, is fitted on the shaft (section 4.2).
+  - **No rating label.** To estimate the current:
+    - measure the phase resistance with a multimeter, across the two wires of
+      one coil;
+    - as a rule of thumb for small motors: R ≈ 1–4 Ω → ~0.8–1.2 A class;
+      R ≈ 10–30 Ω → ~0.3–0.5 A class;
+    - then tune on the bench: start at **≈ 0.4 A RMS** and raise it until the
+      rotor never skips at full speed. Keep the motor case **≤ 50 °C** after
+      1 h, since it sits in a closed wall cavity.
+- **User decision (2026-11-25):** if this motor proves too weak, buy a
+  **NEMA 17**. The design keeps that swap cheap:
+  - the same 31 mm hole pattern;
+  - a pump base with a motor pocket sized for 42.3 mm;
+  - an interchangeable rotor hub insert (section 4.2).
 - **Conclusion: the margin is thin.** Mitigations, in order:
   1. Tune the occlusion gap: start loose (2.8 mm) and tighten only until it
      stops slipping against 0.4 m head. The lift is tiny, so full occlusion is
@@ -166,9 +182,18 @@ low), the step rates halve. The chip interpolates to 256 µsteps either way.
 
 - **Rotor**: two printed discs that sandwich **3× 608 bearings** (8×22×7,
   confirmed) at a **16 mm pitch radius**, on M8 bolts, or on M4 bolts with
-  printed Ø8 sleeves. Hub on the
-  5 mm D shaft with an M3 grub screw and captive nut. Three rollers keep at
-  least one roller occluding at all times. We have 10 bearings: 3 rollers +
+  printed Ø8 sleeves. Three rollers keep at least one roller occluding at all
+  times.
+- **Rotor-to-motor interface**: an **interchangeable hub insert** so the motor
+  can change without reprinting the rotor discs.
+  - **Current motor**: the insert **clamps around the existing Ø16.8 × 11 mm
+    hub**. It has a Ø17.0 bore, a slit, and an M3 pinch bolt with a captive
+    nut, so nothing has to come off the motor. The insert is 11 mm deep, so the
+    rotor sits on the hub, not on the bare shaft.
+  - Alternative: remove the existing hub (loosen its set screw), measure the
+    bare shaft, and use a shaft insert.
+  - **NEMA 17 (future)**: an insert for a Ø5 D-shaft with an M3 grub screw and
+    captive nut. We have 10 bearings: 3 rollers +
   1 lid support bearing + 6 spares.
 - **Track**: a U-shaped track printed into the base, with about 180° plus
   2× 30° of wrap.
@@ -184,8 +209,15 @@ low), the step rates halve. The chip interpolates to 256 µsteps either way.
 - **Lid**: holds the hose in the track and carries one 608 as a top bearing for
   the rotor, so the motor shaft is not cantilevered. **Decided: 4× M3 screws
   into heat-set inserts.**
-- **Motor mount**: the NEMA face mounts on a **rubber NEMA 17 vibration
-  damper** (or TPU grommets) so step vibration does not reach the wall. This
+- **Motor mount**:
+  - **31 mm square hole pattern**, M3 **[TBC thread]**, which fits both the
+    current motor and a NEMA 17;
+  - a centring pocket of **Ø23 × 2.5 mm**, which is generous: it clears the
+    usual Ø22 pilot boss without needing its exact size;
+  - the motor body pocket is sized for 42.3 mm.
+
+  The NEMA face mounts on a **rubber NEMA 17 vibration damper** (or TPU
+  grommets) so step vibration does not reach the wall. This
   matters even more because the unit lives *inside the wall*, and the wall
   cavity acts as a sounding board.
 
@@ -540,8 +572,8 @@ Proposed entities:
 ## 8. Maintenance
 
 - **Pump head**: remove the 4× M3 screws and lift off the lid. Hose, rollers
-  and track are exposed, and the rotor pulls off the shaft after loosening the
-  grub screw.
+  and track are exposed, and the rotor pulls off after loosening the hub
+  insert's pinch bolt.
 - **Reservoir**: remove the lid, then clean or brush. The sensors stay on the
   outside, so there is nothing to disconnect.
 - **Access**: the unit sits in the wall behind the AC. How we get to it (remove
@@ -581,9 +613,9 @@ Proposed entities:
   3. Electronics enclosure.
 - **CAD status**:
   - known: bearings, frame size, hose, sensors, reservoir baseline;
-  - **still blocking the motor mount and hub**: the motor hole spacing, pilot
-    boss and shaft (Q1). The track and rotor test print can start using an
-    assumed Ø5 shaft.
+  - **the CAD can start now**: the hole pattern and the hub are known;
+  - remaining small unknowns are covered with clearance: the pilot boss Ø
+    (pocket Ø23) and the mount screw thread (assume M3).
 
 ## 11. Open questions
 
@@ -604,7 +636,7 @@ Proposed entities:
 
 | # | Question | Why it matters |
 |---|----------|----------------|
-| Q1 | **Motor** (frame **38 × 38**, body **33 mm**, measured). Still needed: label/model, **rated current**, **mounting hole spacing** (centre-to-centre; 39 mm-class motors are usually 31 mm, M3), pilot boss Ø and height, shaft Ø, shaft length, and whether it has a D-flat | Torque margin, VREF setting, motor mount and rotor hub CAD |
+| Q1 | **Motor** (frame 38 × 38, body 33 mm, holes 31 mm square, hub Ø16.8 × 11 with set screw, **no rating label**; all measured). Still useful: **coil resistance** (to estimate rated current), mount screw thread (M3?), pilot boss Ø | VREF setting; the CAD uses clearances meanwhile |
 | Q2 | **Sensor**: output variant (NPN/PNP/V/RS485), supply range, model number on the label; caliper check of the drawing | Interface circuit, wall thickness |
 | Q3 | **Laptop PSU**: label voltage and current | Input protection rating, TMC VM |
 | Q10 | **Wall recess** (deferred, the wall is not being opened now): W × H × D, where the AC drain hose enters, where the drain outlet is, how it is accessed for maintenance, and whether a **taller reservoir** fits | Final envelope, overflow margin, pump head placement |
@@ -623,3 +655,4 @@ Proposed entities:
 | 2026-11-25 | 0.3 | Surveyed the user's Zephyr environment (`introduction-to-zephyr`, `hello_eink`). Verified the C3 toolchain, board and TMC2209 driver in the dev container image. The TMC2209 driver is GPIO-only → two-phase plan (standalone, then own UART module). Reuse list (wifi_prov, watchdogs, native_sim tank simulation, leak patches) |
 | 2026-11-25 | 0.4 | Masterflow square reservoir (≈ 87 × ~78 × 42 mm) adopted as the envelope baseline. Wall recess deferred. Height/overflow budget computed. Pump head becomes a separate block. Zephyr to be upgraded. MQTT/HA layer to be written new, deferred |
 | 2026-11-25 | 0.5 | Measured: motor 38 × 38 × 33 mm (39 mm class, thin torque margin), bearings 608 confirmed, driver is a 16-pin StepStick with micropot. Rotor pitch radius reduced 20 → 16 mm (V_rev ≈ 1.7 mL/rev). Torque mitigations and test procedure. VREF/microstep notes for standalone mode. Pump head ≈ 70 × 70 × 65 mm |
+| 2026-11-25 | 0.6 | Motor: 31 mm hole pattern (NEMA 17-compatible), Ø16.8 × 11 mm hub on the shaft, no rating (estimate from coil resistance plus bench tuning). Interchangeable clamp hub insert; mount and base sized so a NEMA 17 can drop in if needed (user decision). CAD unblocked |
