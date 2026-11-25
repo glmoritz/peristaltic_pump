@@ -21,8 +21,17 @@ behind the AC indoor unit.
 
 - Phase: **documentation done (v0.2). CAD not started.**
 - CAD is blocked on measurements the user will take when they have the parts:
-  motor (Q1), sensor variant (Q2), PSU (Q3), bearings (Q6), **wall recess
-  envelope (Q10, most important)**, TMC2209 version (Q11).
+  motor (Q1), sensor variant (Q2), PSU (Q3), bearings (Q6), TMC2209 version
+  (Q11).
+- **The wall stays closed for now** (Q10 deferred). The envelope baseline is
+  the Masterflow **square reservoir**, about 87 × ~78 × 42 mm (48.5 mm with
+  the spigot); see design.md §4.6. The pump head is a separate block joined
+  only by the hose.
+- Firmware is **deferred**:
+  - the MQTT + HA discovery layer will be written new;
+  - the user will **upgrade Zephyr** (it is not pinned at 4.5.0-dev), so
+    re-verify the board, the TMC2209 driver and the stepper API on the new
+    version.
 - Next steps:
   1. Collect the measurements and update design.md.
   2. Write the parametric FreeCAD scripts in `cad/`: pump head first, then a

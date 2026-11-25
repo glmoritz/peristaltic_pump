@@ -1,6 +1,6 @@
 # Quiet Condensate Peristaltic Pump — Design Document
 
-Status: **draft v0.3** (2026-11-25) — requirements and concept, before CAD.
+Status: **draft v0.4** (2026-11-25) — requirements and concept, before CAD.
 This file is the single source of truth for the project and will evolve until
 the working prototype. Values marked **[TBC]** are assumptions waiting for a
 measurement or confirmation; see [Open questions](#11-open-questions).
@@ -217,9 +217,43 @@ be confirmed with a caliper**.
 | Side view: overall height | 48.5 mm |
 | Hose barbs | Ø7 mm |
 
-The Masterflow is a slim in-line unit, about 162 × 28 × 29 mm for the main
-body. A NEMA 17 pump head with a Ø62 mm rotor is roughly **85 × 85 × 90 mm**,
-much bulkier. **The recess dimensions (Q10) are the #1 input for the CAD.**
+**Interpretation (confirmed by the user, 2026-11-25).** The drawing shows two
+parts:
+
+- the slim in-line **pump body**: 162 × 28 × 29 mm, with Ø7 mm barbs;
+- the **square reservoir**: about **87 mm wide × 42 mm tall (48.5 mm including
+  the inlet spigot)**. The user's installed reservoir looks like this one.
+
+The drawing is **not to scale** (horizontal and vertical pixel scales differ),
+so the depth is not given. Using the horizontal scale of the 87 mm dimension,
+the depth comes out at **≈ 75–80 mm**, which matches "square" in plan.
+
+**Decision:** use this square reservoir as the **envelope baseline for our
+printed reservoir**, about 87 × 78 × 42–48 mm, until the real recess can be
+measured. The user is not opening the wall for now (Q10 deferred).
+
+What this means for the design:
+
+- **Interior footprint** with 2 mm walls: about 83 × 74 mm = **61 cm²**.
+  - V_LH = 50 mL → **8 mm** between L and H.
+  - Alternatively, keep 14 mm spacing → V_LH ≈ 85 mL. Both are OK for the
+    flow estimate.
+- **Height budget is tight** (42 mm):
+  - floor and pickup: 0–5 mm;
+  - L trip point: ≥ 15 mm;
+  - H trip point: ~23–29 mm;
+  - only **~10–15 mm of headroom above H**, which is ≈ 60–90 mL. With the pump
+    dead at 1.5 L/h inflow, that is **≈ 2.5–3.5 min to overflow**. So the
+    failure alarm must be fast (shorten `T_fail` accordingly). If the recess
+    allows, make the printed reservoir **taller** than the Masterflow one,
+    since height is the cheapest overflow margin.
+- **Sensor placement**: each sensor is 24 mm tall, so L and H go on
+  **different faces**, with their trip lines offset vertically.
+- **Pump head**: a NEMA 17 pump head with a Ø62 mm rotor is roughly
+  **85 × 85 × 90 mm**, which does not fit where the slim Masterflow pump body
+  sits. Until the recess is measured, design the pump head as a **separate
+  block joined only by the hose**. It can then go wherever there is room: in
+  the recess next to the reservoir, or outside behind the AC cover.
 
 If the space is tight, the options are:
 
@@ -361,6 +395,12 @@ DRAIN  : q_p = k_hi · q̂_in   (k_hi ≈ 1.25)  level falls  H→L in t_down
 
 The firmware reuses the user's Zephyr environment: the course container repo
 at `~/00_tmp/zephyr/introduction-to-zephyr`, which was surveyed on 2026-11-25.
+
+**Decision (2026-11-25):** the Zephyr version is **not frozen**. The user will
+update the container to a newer Zephyr before the firmware starts. Re-verify
+the items below on the new version: the stepper API was being reworked, and a
+newer `adi,tmc2209` may even gain UART support. Firmware work, including the
+new MQTT + HA discovery layer, is **deferred**.
 
 - **Dev container**: `.devcontainer` builds `Dockerfile.moritz`, which pins
   **Zephyr 4.5.0-dev @ `fbfc5f19`** with SDK 1.0.1. The newest local image,
@@ -518,7 +558,9 @@ Proposed entities:
 | Q5 | Hose | 4×7 silicone hose runs **continuously to the drain** |
 | Q7 | Failure action | **Notify Home Assistant**. Later: HA automation turns the LG AC off via its Wi-Fi |
 | Q8 | Lid fixing | **4× M3 screws** into heat-set inserts |
-| Q9 | Firmware | **Zephyr + MQTT + HA MQTT discovery**, built in the existing `introduction-to-zephyr` dev container (Zephyr 4.5.0-dev @ fbfc5f19) |
+| Q9 | Firmware | **Zephyr + MQTT + HA MQTT discovery**, built in the existing `introduction-to-zephyr` dev container. Zephyr will be **upgraded** (not frozen at 4.5.0-dev @ fbfc5f19) |
+| Q13a | MQTT/HA code | **Written new** for this project (no existing code to reuse). Deferred, not now |
+| Q10a | Reservoir envelope | Baseline = the Masterflow **square reservoir**, ≈ 87 × ~78 × 42 (48.5 with spigot) mm. The wall stays closed for now |
 
 ### Still open (needs measuring — parts are not at hand yet)
 
@@ -528,10 +570,10 @@ Proposed entities:
 | Q2 | **Sensor**: output variant (NPN/PNP/V/RS485), supply range, model number on the label; caliper check of the drawing | Interface circuit, wall thickness |
 | Q3 | **Laptop PSU**: label voltage and current | Input protection rating, TMC VM |
 | Q6 | **Bearings**: confirm 608 (8×22×7) | Rotor design |
-| Q10 | **Wall recess**: W × H × D, where the AC drain hose enters, where the drain outlet is, how it is accessed for maintenance | Overall envelope, #1 CAD input |
+| Q10 | **Wall recess** (deferred, the wall is not being opened now): W × H × D, where the AC drain hose enters, where the drain outlet is, how it is accessed for maintenance, and whether a **taller reservoir** fits | Final envelope, overflow margin, pump head placement |
 | Q11 | **TMC2209 module**: version (BTT v1.3/v2/v3/generic), is UART pre-bridged, how SPREAD and MS1/MS2 are strapped on the board | Phase 1 standalone strapping, phase 2 UART wiring |
 | Q12 | Add a 3rd sensor or a float switch as an independent overflow input? | No hardware AC cut-off exists, so an overflow spills inside the wall |
-| Q13 | Is there an existing project with **MQTT + HA discovery** code? (`hello_eink` has none; it uses HTTP/LLSS.) And where should the firmware live: `firmware/` in this repo, cloned into `workspace/projects/`, or a separate repo? | Reuse vs new MQTT/HA module; container mount |
+| Q13 | Where should the firmware live: `firmware/` in this repo (cloned into `workspace/projects/`), or a separate repo? (Decide when firmware starts.) | Container mount |
 | Q14 | AC drain hose: ID/OD where it enters the reservoir lid | Inlet fitting |
 | — | Masterflow 20: caliper-confirm the values in section 4.6 | Reference envelope |
 
@@ -542,3 +584,4 @@ Proposed entities:
 | 2026-11-25 | 0.1 | First draft: requirements, sizing, concept, control strategy, open questions |
 | 2026-11-25 | 0.2 | User decisions recorded (printed reservoir, continuous hose, HA notification, M3 lid, Zephyr/MQTT/HA). Unit mounts in the wall recess behind the AC → envelope and overflow concerns. PSU input protection. Masterflow dimensions read from `pump_dimensions.png`. HA entity list |
 | 2026-11-25 | 0.3 | Surveyed the user's Zephyr environment (`introduction-to-zephyr`, `hello_eink`). Verified the C3 toolchain, board and TMC2209 driver in the dev container image. The TMC2209 driver is GPIO-only → two-phase plan (standalone, then own UART module). Reuse list (wifi_prov, watchdogs, native_sim tank simulation, leak patches) |
+| 2026-11-25 | 0.4 | Masterflow square reservoir (≈ 87 × ~78 × 42 mm) adopted as the envelope baseline. Wall recess deferred. Height/overflow budget computed. Pump head becomes a separate block. Zephyr to be upgraded. MQTT/HA layer to be written new, deferred |
