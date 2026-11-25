@@ -20,9 +20,14 @@ behind the AC indoor unit.
 ## State (2026-11-25)
 
 - Phase: **documentation done (v0.2). CAD not started.**
-- CAD is blocked on measurements the user will take when they have the parts:
-  motor (Q1), sensor variant (Q2), PSU (Q3), bearings (Q6), TMC2209 version
-  (Q11).
+- Measured so far:
+  - **motor 38 × 38 × 33 mm**: 39 mm class, so the torque margin is thin
+    → the rotor pitch radius was reduced to 16 mm; see design.md §3.3;
+  - **bearings 608 confirmed**;
+  - **driver: 16-pin StepStick with micropot**.
+- Still needed before the CAD: the motor hole spacing, pilot boss and shaft
+  (Q1). Nice to have: the sensor variant (Q2), PSU label (Q3) and the driver
+  pin labels (Q11).
 - **The wall stays closed for now** (Q10 deferred). The envelope baseline is
   the Masterflow **square reservoir**, about 87 × ~78 × 42 mm (48.5 mm with
   the spigot); see design.md §4.6. The pump head is a separate block joined

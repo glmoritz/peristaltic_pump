@@ -1,6 +1,6 @@
 # Quiet Condensate Peristaltic Pump — Design Document
 
-Status: **draft v0.4** (2026-11-25) — requirements and concept, before CAD.
+Status: **draft v0.5** (2026-11-25) — requirements and concept, before CAD.
 This file is the single source of truth for the project and will evolve until
 the working prototype. Values marked **[TBC]** are assumptions waiting for a
 measurement or confirmation; see [Open questions](#11-open-questions).
@@ -60,38 +60,64 @@ the speed range. The firmware also logs the real production to HA.
 
 Silicone hose: ID 4 mm, OD 7 mm, wall 1.5 mm → bore area A = π·2² = 12.57 mm².
 
-Proposed rotor (section 4.2): three 608 bearings (Ø22 mm, **[TBC]**) on a 20 mm
-pitch radius → roller outer radius 31 mm. Hose centre line ≈ 31 mm radius.
+**Rotor:** three 608 bearings (Ø22 × 7 mm, bore 8 mm, **confirmed**) on a
+**16 mm pitch radius** → roller outer radius 27 mm. Hose centre line ≈ 27 mm.
+
+Why 16 mm: it is reduced from the 20 mm of v0.3 to cut the torque demand for
+the small motor (section 3.3). It is the practical minimum:
+
+- roller-to-roller chord = 16·√3 = 27.7 mm against Ø22 rollers, which leaves
+  5.7 mm clearance;
+- the M8 axle sits 9.5 mm from the Ø5 shaft.
 
 ```
-V_rev ≈ A · 2π · r_hose = 12.57 · 2π · 31 ≈ 2.45 mL/rev (theoretical)
-V_rev ≈ 2.0 mL/rev (assumed ~80 % efficiency, to be calibrated)
+V_rev ≈ A · 2π · r_hose = 12.57 · 2π · 27 ≈ 2.13 mL/rev (theoretical)
+V_rev ≈ 1.7 mL/rev (assumed ~80 % efficiency, to be calibrated)
 ```
 
 | Flow | Rotor speed | Step rate (200 steps/rev, 16 µsteps) |
 |------|-------------|------------------------------|
-| 0.3 L/h | 2.5 RPM | 133 Hz |
-| 1 L/h | 8.3 RPM | 444 Hz |
-| 2 L/h | 16.7 RPM | 889 Hz |
-| 20 L/h | 167 RPM | 8.9 kHz |
+| 0.3 L/h | 2.9 RPM | 157 Hz |
+| 1 L/h | 9.8 RPM | 523 Hz |
+| 2 L/h | 19.6 RPM | 1.05 kHz |
+| 20 L/h | 196 RPM | 10.5 kHz |
 
 All of these suit **direct drive with no gearbox**. A stepper in TMC2209
-StealthChop at 2–20 RPM is essentially silent, and a gearbox would only add
-noise.
-
-If the envelope (R8) forces a smaller rotor, displacement scales with
-r_hose. For example, r = 20 mm gives ≈ 1.3 mL/rev, which is still fine
-(≈ 13 RPM at 1 L/h).
+StealthChop at 3–20 RPM is essentially silent, and a gearbox would only add
+noise. If the TMC2209 is left at its pin-default of **8 µsteps** (MS1/MS2
+low), the step rates halve. The chip interpolates to 256 µsteps either way.
 
 ### 3.3 Pressure and torque
 
 - 0.4 m of water = 3.9 kPa, which is negligible. The load is dominated by
   **squeezing the hose**, not by the lift.
-- Estimated rotor torque for 4×7 silicone hose at r = 31 mm: **0.1–0.25 N·m
-  [estimate, measure on the prototype]**.
-- NEMA 17, 40 mm long: ≈ 0.4 N·m holding torque, which is fine. NEMA 17, 34 mm
-  long: ≈ 0.28 N·m, which is OK. **NEMA 14, 35 mm long: ≈ 0.12–0.18 N·m, which
-  is marginal** and would need a smaller rotor or a 1:3 belt. → Q1.
+- Estimated rotor torque for 4×7 silicone hose:
+  - r = 31 mm: 0.1–0.25 N·m;
+  - **r = 27 mm: ≈ 0.09–0.22 N·m**.
+
+  **This is a rough estimate. Measure it on the track test print.** Torque
+  scales roughly with r_hose and very strongly with the occlusion gap.
+- **Motor (measured 2026-11-25): 38 × 38 mm frame, 33 mm body.** This is
+  neither a NEMA 14 (35.2 mm) nor a NEMA 17 (42.3 mm). It is most likely a
+  **39 mm-class ("NEMA 16", e.g. 39BYG) motor**, typically
+  **≈ 0.15–0.25 N·m holding torque** at this length. Rated current, hole
+  pattern and shaft are **[TBC Q1]**.
+- **Conclusion: the margin is thin.** Mitigations, in order:
+  1. Tune the occlusion gap: start loose (2.8 mm) and tighten only until it
+     stops slipping against 0.4 m head. The lift is tiny, so full occlusion is
+     not needed.
+  2. Run current up to the motor rating. StealthChop torque at < 20 RPM is
+     close to holding torque.
+  3. Use the smaller rotor (already done: r = 27).
+  4. Last resort: a 1:2–1:3 GT2 belt reduction. This costs some noise, but
+     belts are quiet.
+  5. A NEMA 17 motor (≈ R$ 40–60) if all else fails.
+- **Torque test** on the first print (track + rotor only):
+  - put a lever arm (e.g. 100 mm) on the rotor hub;
+  - push it with a kitchen or luggage scale while a hose full of water sits in
+    the track;
+  - T = F · L, and peak, not average, is what matters;
+  - also find the minimum motor current that never skips at 196 RPM.
 
 ### 3.4 Power budget
 
@@ -138,15 +164,18 @@ r_hose. For example, r = 20 mm gives ≈ 1.3 mL/rev, which is still fine
 
 ### 4.2 Pump head
 
-- **Rotor**: two printed discs that sandwich **3× 608 bearings** (8×22×7
-  **[TBC]**) on M8 bolts, or on M4 bolts with printed Ø8 sleeves. Hub on the
+- **Rotor**: two printed discs that sandwich **3× 608 bearings** (8×22×7,
+  confirmed) at a **16 mm pitch radius**, on M8 bolts, or on M4 bolts with
+  printed Ø8 sleeves. Hub on the
   5 mm D shaft with an M3 grub screw and captive nut. Three rollers keep at
   least one roller occluding at all times. We have 10 bearings: 3 rollers +
   1 lid support bearing + 6 spares.
 - **Track**: a U-shaped track printed into the base, with about 180° plus
   2× 30° of wrap.
   - Track inner radius = roller outer radius + occlusion gap.
-  - **Occlusion gap: start at 2.6 mm** (≈ 87 % of 2× wall thickness = 3.0 mm).
+  - **Occlusion gap: 2.6 mm nominal** (≈ 87 % of 2× wall thickness = 3.0 mm).
+    Because of the motor's torque margin (section 3.3), print test inserts at
+    2.4 / 2.6 / 2.8 mm and pick the loosest one that doesn't slip.
   - Make the gap **adjustable** with a replaceable track insert or shims, since
     under-occlusion means slip and over-occlusion wears the hose fast and needs
     more torque.
@@ -249,9 +278,9 @@ What this means for the design:
     since height is the cheapest overflow margin.
 - **Sensor placement**: each sensor is 24 mm tall, so L and H go on
   **different faces**, with their trip lines offset vertically.
-- **Pump head**: a NEMA 17 pump head with a Ø62 mm rotor is roughly
-  **85 × 85 × 90 mm**, which does not fit where the slim Masterflow pump body
-  sits. Until the recess is measured, design the pump head as a **separate
+- **Pump head**: with the 38 mm motor and a Ø54 mm rotor (track outer
+  Ø ≈ 70 mm), the pump head is roughly **70 × 70 × 65 mm**. That is still much
+  bulkier than the slim Masterflow pump body (162 × 28 × 29 mm). Until the recess is measured, design the pump head as a **separate
   block joined only by the hose**. It can then go wherever there is room: in
   the recess next to the reservoir, or outside behind the AC cover.
 
@@ -284,9 +313,14 @@ ESP32-C3 3V3 ──► TMC2209 VIO
   laptop PSU is fine.
 - **TMC2209 mode, in two phases** (see section 6.5 for why):
   - **Phase 1, standalone.** The upstream Zephyr driver is step/dir +
-    enable + microstep GPIOs only. Set the current with the module's VREF pot,
-    and strap MS1/MS2 for 16 µsteps (256 interpolated). StealthChop is the
-    standalone default when SPREAD is low **[TBC on the module, Q11]**.
+    enable + microstep GPIOs only.
+    - Set the current with the module's VREF **micropot**. On a typical
+      0.11 Ω-sense module, I_RMS ≈ 0.71 × VREF, measured between the pot wiper
+      and GND. Set it to ≈ 70–90 % of the motor's rated current.
+    - MS1/MS2 have internal pull-downs, so if left open → **8 µsteps** (256
+      interpolated), which is fine. Strap MS2 high, MS1 high for 16.
+    - StealthChop is the standalone default when SPREAD is low **[TBC on the
+      module, Q11]**.
   - **Phase 2, UART.** Our own small register module adds software current
     control, StealthChop tuning and diagnostics: overtemperature, open load,
     and StallGuard (only works at higher speed). Wire PDN_UART to GPIO6/7 from
@@ -310,7 +344,7 @@ GPIO8, and the USB pins GPIO18/19.
 | 5 | TMC2209 EN (active low) |
 | 6 | TMC2209 UART TX → 1 kΩ → PDN_UART (used from phase 2) |
 | 7 | TMC2209 UART RX ← PDN_UART (used from phase 2) |
-| 10 | TMC2209 DIAG |
+| 10 | TMC2209 DIAG, **only if the module exposes it**. The 16-pin StepStick header doesn't carry DIAG; some modules have it on an extra top pin or pad |
 | 20 | Local buzzer (optional, alarm also goes to HA) |
 | 21 | Spare: 3rd "overflow" sensor (Q12) or push button (manual purge / test) |
 
@@ -560,18 +594,18 @@ Proposed entities:
 | Q8 | Lid fixing | **4× M3 screws** into heat-set inserts |
 | Q9 | Firmware | **Zephyr + MQTT + HA MQTT discovery**, built in the existing `introduction-to-zephyr` dev container. Zephyr will be **upgraded** (not frozen at 4.5.0-dev @ fbfc5f19) |
 | Q13a | MQTT/HA code | **Written new** for this project (no existing code to reuse). Deferred, not now |
+| Q6 | Bearings | **608 confirmed** (22 × 7 × 8 mm), 10 pcs |
 | Q10a | Reservoir envelope | Baseline = the Masterflow **square reservoir**, ≈ 87 × ~78 × 42 (48.5 with spigot) mm. The wall stays closed for now |
 
 ### Still open (needs measuring — parts are not at hand yet)
 
 | # | Question | Why it matters |
 |---|----------|----------------|
-| Q1 | **Motor**: frame size (42 mm square = NEMA 17, 35 mm = NEMA 14), body length, shaft Ø and D-cut, label/model, rated current | Torque margin, rotor size, mount pattern |
+| Q1 | **Motor** (frame **38 × 38**, body **33 mm**, measured). Still needed: label/model, **rated current**, **mounting hole spacing** (centre-to-centre; 39 mm-class motors are usually 31 mm, M3), pilot boss Ø and height, shaft Ø, shaft length, and whether it has a D-flat | Torque margin, VREF setting, motor mount and rotor hub CAD |
 | Q2 | **Sensor**: output variant (NPN/PNP/V/RS485), supply range, model number on the label; caliper check of the drawing | Interface circuit, wall thickness |
 | Q3 | **Laptop PSU**: label voltage and current | Input protection rating, TMC VM |
-| Q6 | **Bearings**: confirm 608 (8×22×7) | Rotor design |
 | Q10 | **Wall recess** (deferred, the wall is not being opened now): W × H × D, where the AC drain hose enters, where the drain outlet is, how it is accessed for maintenance, and whether a **taller reservoir** fits | Final envelope, overflow margin, pump head placement |
-| Q11 | **TMC2209 module**: version (BTT v1.3/v2/v3/generic), is UART pre-bridged, how SPREAD and MS1/MS2 are strapped on the board | Phase 1 standalone strapping, phase 2 UART wiring |
+| Q11 | **TMC2209 module** (16-pin StepStick with micropot, known). Still needed: the pin labels printed on it (is it `PDN`/`UART` or `RX`/`TX`?), any extra pins on top (DIAG/INDEX), the brand/version printed on it, and the sense resistor marking (R100/R110) | VREF formula, phase 2 UART wiring, DIAG availability |
 | Q12 | Add a 3rd sensor or a float switch as an independent overflow input? | No hardware AC cut-off exists, so an overflow spills inside the wall |
 | Q13 | Where should the firmware live: `firmware/` in this repo (cloned into `workspace/projects/`), or a separate repo? (Decide when firmware starts.) | Container mount |
 | Q14 | AC drain hose: ID/OD where it enters the reservoir lid | Inlet fitting |
@@ -585,3 +619,4 @@ Proposed entities:
 | 2026-11-25 | 0.2 | User decisions recorded (printed reservoir, continuous hose, HA notification, M3 lid, Zephyr/MQTT/HA). Unit mounts in the wall recess behind the AC → envelope and overflow concerns. PSU input protection. Masterflow dimensions read from `pump_dimensions.png`. HA entity list |
 | 2026-11-25 | 0.3 | Surveyed the user's Zephyr environment (`introduction-to-zephyr`, `hello_eink`). Verified the C3 toolchain, board and TMC2209 driver in the dev container image. The TMC2209 driver is GPIO-only → two-phase plan (standalone, then own UART module). Reuse list (wifi_prov, watchdogs, native_sim tank simulation, leak patches) |
 | 2026-11-25 | 0.4 | Masterflow square reservoir (≈ 87 × ~78 × 42 mm) adopted as the envelope baseline. Wall recess deferred. Height/overflow budget computed. Pump head becomes a separate block. Zephyr to be upgraded. MQTT/HA layer to be written new, deferred |
+| 2026-11-25 | 0.5 | Measured: motor 38 × 38 × 33 mm (39 mm class, thin torque margin), bearings 608 confirmed, driver is a 16-pin StepStick with micropot. Rotor pitch radius reduced 20 → 16 mm (V_rev ≈ 1.7 mL/rev). Torque mitigations and test procedure. VREF/microstep notes for standalone mode. Pump head ≈ 70 × 70 × 65 mm |
