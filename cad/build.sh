@@ -11,3 +11,9 @@ for t in "$@"; do
     CAD_TARGET="$t" "$FREECAD" freecadcmd "$here/run.py" 2>&1 \
         | grep -E '^(==|  )|Error|Traceback|Exception|File "' || true
 done
+# Second pass in the FreeCAD GUI (off-screen): colours + saved camera for the
+# assembly .FCStd files, which freecadcmd cannot store.
+echo "### gui styling"
+rm -f "$here/out/.gui_view.log"
+QT_QPA_PLATFORM=offscreen "$FREECAD" "$here/gui_view.py" >/dev/null 2>&1 || true
+cat "$here/out/.gui_view.log" 2>/dev/null || echo "  (gui styling step produced no log)"

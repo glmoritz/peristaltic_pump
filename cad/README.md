@@ -23,15 +23,18 @@ named `ref_*` are reference parts and are not printed.
 | `pump.py` | pump head: base, track inserts, rotor, sleeves, lid |
 | `reservoir.py` | reservoir: body, lid, strainer cage, sensor clip |
 | `run.py` | runner (`freecadcmd` doesn't set `__name__ == "__main__"`) |
+| `gui_view.py` | second pass in the FreeCAD GUI (off-screen): colours, isometric camera, translucent lids, saved into the `.FCStd`, plus a FreeCAD screenshot |
 | `out/` | generated: `*.stl`, `*.step`, `*_assembly.FCStd`, `*.png` |
 
 ## Pump head
 
-![assembly](out/pump_assembly.png)
+![assembly](out/pump_assembly_freecad.png)
 
 | | |
 |---|---|
 | ![top](out/pump_top.png) | ![exploded](out/pump_exploded.png) |
+
+(The `*_freecad.png` images are rendered by FreeCAD itself with the camera saved in the `.FCStd`; the others are quick matplotlib previews.)
 
 ### Print list (PETG)
 
@@ -86,7 +89,7 @@ lift.
 
 | | |
 |---|---|
-| ![assembly](out/reservoir_assembly.png) | ![section](out/reservoir_section.png) |
+| ![assembly](out/reservoir_assembly_freecad.png) | ![section](out/reservoir_section.png) |
 
 ### Print list (black or dark PETG, because light grows algae)
 

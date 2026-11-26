@@ -9,3 +9,4 @@ build/
 # Zephyr / west
 .west/
 twister-out*/
+cad/out/.gui_view.log
