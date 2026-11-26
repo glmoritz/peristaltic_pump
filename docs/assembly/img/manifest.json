@@ -1,0 +1,458 @@
+{
+ "steps": [
+  {
+   "n": 1,
+   "section": "Pump head",
+   "title": "Heat-set inserts",
+   "note": "Soldering iron at ~220 °C, press each insert until it is flush. 4 in the wall tops (lid), 2 in the back wall (electronics box).",
+   "times": 1,
+   "img": "docs/assembly/img/step_01.png",
+   "callouts": [
+    [
+     "base",
+     1
+    ],
+    [
+     "insert_m3",
+     6
+    ]
+   ]
+  },
+  {
+   "n": 2,
+   "section": "Pump head",
+   "title": "Motor",
+   "note": "Motor boss into the round pocket under the base. Cable facing the back (+y), where the electronics box will be.",
+   "times": 1,
+   "img": "docs/assembly/img/step_02.png",
+   "callouts": [
+    [
+     "motor",
+     1
+    ],
+    [
+     "m3x8",
+     4
+    ]
+   ]
+  },
+  {
+   "n": 3,
+   "section": "Pump head",
+   "title": "Rollers — build 3",
+   "note": "Slide 2 bearings onto each printed sleeve, flange at the bottom. Make 3.",
+   "times": 3,
+   "img": "docs/assembly/img/step_03.png",
+   "callouts": [
+    [
+     "sleeve",
+     1
+    ],
+    [
+     "bearing",
+     2
+    ]
+   ]
+  },
+  {
+   "n": 4,
+   "section": "Pump head",
+   "title": "Lower rotor inserts",
+   "note": "Press the M4 inserts into the flat top face (the face without the clamp).",
+   "times": 1,
+   "img": "docs/assembly/img/step_04.png",
+   "callouts": [
+    [
+     "rotor_lower",
+     1
+    ],
+    [
+     "insert_m4",
+     3
+    ]
+   ]
+  },
+  {
+   "n": 5,
+   "section": "Pump head",
+   "title": "Rollers on the rotor",
+   "note": "Stand each roller over an insert.",
+   "times": 1,
+   "img": "docs/assembly/img/step_05.png",
+   "callouts": [
+    [
+     "roller",
+     3
+    ]
+   ]
+  },
+  {
+   "n": 6,
+   "section": "Pump head",
+   "title": "Upper rotor",
+   "note": "Bosses down onto the bearings. Tighten until the rollers spin freely with no up-down play.",
+   "times": 1,
+   "img": "docs/assembly/img/step_06.png",
+   "callouts": [
+    [
+     "rotor_upper",
+     1
+    ],
+    [
+     "m4x25",
+     3
+    ]
+   ]
+  },
+  {
+   "n": 7,
+   "section": "Pump head",
+   "title": "Rotor onto the motor",
+   "note": "First drop 2 M3 nuts into the slots under the clamp. Slide the rotor over the motor hub. Tighten each grub screw through the hole in the front wall (1.5 mm hex key), turning the rotor between them.",
+   "times": 1,
+   "img": "docs/assembly/img/step_07.png",
+   "callouts": [
+    [
+     "rotor_asm",
+     1
+    ],
+    [
+     "nut_m3",
+     2
+    ],
+    [
+     "grub_m3",
+     2
+    ]
+   ]
+  },
+  {
+   "n": 8,
+   "section": "Pump head",
+   "title": "Track insert",
+   "note": "Start with the 2.6 mm insert (2 dimples). The 2.4 and 2.8 inserts are for tuning: use the loosest one that still pumps.",
+   "times": 1,
+   "img": "docs/assembly/img/step_08.png",
+   "callouts": [
+    [
+     "track",
+     1
+    ]
+   ]
+  },
+  {
+   "n": 9,
+   "section": "Pump head",
+   "title": "Hose",
+   "note": "Push the hose between the rollers and the track while turning the rotor by hand. Both legs go into the U-slots in the front wall.",
+   "times": 1,
+   "img": "docs/assembly/img/step_09.png",
+   "callouts": [
+    [
+     "hose",
+     1
+    ]
+   ]
+  },
+  {
+   "n": 10,
+   "section": "Pump head",
+   "title": "Lid",
+   "note": "The tabs under the lid press the hose into the U-slots so it cannot creep.",
+   "times": 1,
+   "img": "docs/assembly/img/step_10.png",
+   "callouts": [
+    [
+     "pump_lid",
+     1
+    ],
+    [
+     "m3x10",
+     4
+    ]
+   ]
+  },
+  {
+   "n": 11,
+   "section": "Reservoir",
+   "title": "Heat-set inserts",
+   "note": "4 in the corner columns (lid), 2 in each pair of sensor bosses. The bosses are blind: the wall stays watertight. Test-fill the box with water before going on.",
+   "times": 1,
+   "img": "docs/assembly/img/step_11.png",
+   "callouts": [
+    [
+     "res_body",
+     1
+    ],
+    [
+     "insert_m3",
+     8
+    ]
+   ]
+  },
+  {
+   "n": 12,
+   "section": "Reservoir",
+   "title": "Strainer",
+   "note": "Into the ring on the floor, in the corner nearest the pump.",
+   "times": 1,
+   "img": "docs/assembly/img/step_12.png",
+   "callouts": [
+    [
+     "strainer",
+     1
+    ]
+   ]
+  },
+  {
+   "n": 13,
+   "section": "Reservoir",
+   "title": "Level sensors",
+   "note": "L sensor on the front wall, H sensor on the right wall. Sensing face against the wall, cable pointing down. Leave the screws slightly loose: the slots adjust the height.",
+   "times": 1,
+   "img": "docs/assembly/img/step_13.png",
+   "callouts": [
+    [
+     "sensor",
+     2
+    ],
+    [
+     "clip",
+     2
+    ],
+    [
+     "m3x8",
+     4
+    ]
+   ]
+  },
+  {
+   "n": 14,
+   "section": "Reservoir",
+   "title": "Lid and pickup hose",
+   "note": "Feed the pump's inlet hose through the small collar and push it into the strainer socket. The AC drain hose just drops into the big collar.",
+   "times": 1,
+   "img": "docs/assembly/img/step_14.png",
+   "callouts": [
+    [
+     "res_lid",
+     1
+    ],
+    [
+     "m3x8",
+     4
+    ],
+    [
+     "hose",
+     1
+    ]
+   ]
+  },
+  {
+   "n": 15,
+   "section": "Electronics",
+   "title": "Solder the board",
+   "note": "Solder by following docs/electronics.md. Set the MP1584 to 5.0 V BEFORE fitting the ESP32 and the sensors.",
+   "times": 1,
+   "img": "docs/assembly/img/step_15.png",
+   "callouts": [
+    [
+     "board",
+     1
+    ]
+   ]
+  },
+  {
+   "n": 16,
+   "section": "Electronics",
+   "title": "Box on the pump",
+   "note": "From inside the box, screw it to the 2 inserts in the pump's back wall.",
+   "times": 1,
+   "img": "docs/assembly/img/step_16.png",
+   "callouts": [
+    [
+     "ebox",
+     1
+    ],
+    [
+     "m3x8",
+     2
+    ]
+   ]
+  },
+  {
+   "n": 17,
+   "section": "Electronics",
+   "title": "Board into the box",
+   "note": "Components facing out, ESP32 USB-C towards the side opening.",
+   "times": 1,
+   "img": "docs/assembly/img/step_17.png",
+   "callouts": [
+    [
+     "board",
+     1
+    ],
+    [
+     "m2x6",
+     4
+    ]
+   ]
+  },
+  {
+   "n": 18,
+   "section": "Electronics",
+   "title": "Cables and lid",
+   "note": "Cables come in through the bottom holes: J1 power, J3 sensor L, J2 motor, J4 sensor H. Leave a drip loop in each cable before closing the lid.",
+   "times": 1,
+   "img": "docs/assembly/img/step_18.png",
+   "callouts": [
+    [
+     "elid",
+     1
+    ],
+    [
+     "m3x10",
+     4
+    ]
+   ]
+  }
+ ],
+ "thumbs": {
+  "base": {
+   "img": "docs/assembly/img/part_base.png",
+   "label": "Pump base",
+   "inventory": false
+  },
+  "insert_m3": {
+   "img": "docs/assembly/img/part_insert_m3.png",
+   "label": "M3 heat-set insert",
+   "inventory": true
+  },
+  "motor": {
+   "img": "docs/assembly/img/part_motor.png",
+   "label": "Stepper motor",
+   "inventory": false
+  },
+  "m3x8": {
+   "img": "docs/assembly/img/part_m3x8.png",
+   "label": "M3 × 8 screw",
+   "inventory": true
+  },
+  "m3x10": {
+   "img": "docs/assembly/img/part_m3x10.png",
+   "label": "M3 × 10 screw",
+   "inventory": true
+  },
+  "sleeve": {
+   "img": "docs/assembly/img/part_sleeve.png",
+   "label": "Axle sleeve (printed)",
+   "inventory": true
+  },
+  "bearing": {
+   "img": "docs/assembly/img/part_bearing.png",
+   "label": "608 bearing",
+   "inventory": true
+  },
+  "rotor_lower": {
+   "img": "docs/assembly/img/part_rotor_lower.png",
+   "label": "Lower rotor (printed)",
+   "inventory": true
+  },
+  "insert_m4": {
+   "img": "docs/assembly/img/part_insert_m4.png",
+   "label": "M4 heat-set insert",
+   "inventory": true
+  },
+  "roller": {
+   "img": "docs/assembly/img/part_roller.png",
+   "label": "Roller from step 3",
+   "inventory": false
+  },
+  "rotor_upper": {
+   "img": "docs/assembly/img/part_rotor_upper.png",
+   "label": "Upper rotor (printed)",
+   "inventory": true
+  },
+  "m4x25": {
+   "img": "docs/assembly/img/part_m4x25.png",
+   "label": "M4 × 25 countersunk",
+   "inventory": true
+  },
+  "nut_m3": {
+   "img": "docs/assembly/img/part_nut_m3.png",
+   "label": "M3 nut",
+   "inventory": true
+  },
+  "grub_m3": {
+   "img": "docs/assembly/img/part_grub_m3.png",
+   "label": "M3 × 8 grub screw",
+   "inventory": true
+  },
+  "rotor_asm": {
+   "img": "docs/assembly/img/part_rotor_asm.png",
+   "label": "Rotor from step 6",
+   "inventory": false
+  },
+  "track": {
+   "img": "docs/assembly/img/part_track.png",
+   "label": "Track insert 2.6 (2 dimples)",
+   "inventory": true
+  },
+  "hose": {
+   "img": "docs/assembly/img/part_hose.png",
+   "label": "Silicone hose 4 × 7",
+   "inventory": true
+  },
+  "pump_lid": {
+   "img": "docs/assembly/img/part_pump_lid.png",
+   "label": "Pump lid (printed)",
+   "inventory": true
+  },
+  "res_body": {
+   "img": "docs/assembly/img/part_res_body.png",
+   "label": "Reservoir (printed)",
+   "inventory": true
+  },
+  "strainer": {
+   "img": "docs/assembly/img/part_strainer.png",
+   "label": "Strainer (printed)",
+   "inventory": true
+  },
+  "sensor": {
+   "img": "docs/assembly/img/part_sensor.png",
+   "label": "Level sensor",
+   "inventory": true
+  },
+  "clip": {
+   "img": "docs/assembly/img/part_clip.png",
+   "label": "Sensor clip (printed)",
+   "inventory": true
+  },
+  "res_lid": {
+   "img": "docs/assembly/img/part_res_lid.png",
+   "label": "Reservoir lid (printed)",
+   "inventory": true
+  },
+  "board": {
+   "img": "docs/assembly/img/part_board.png",
+   "label": "Soldered perfboard",
+   "inventory": false
+  },
+  "ebox": {
+   "img": "docs/assembly/img/part_ebox.png",
+   "label": "Electronics box (printed)",
+   "inventory": true
+  },
+  "elid": {
+   "img": "docs/assembly/img/part_elid.png",
+   "label": "Box lid (printed)",
+   "inventory": true
+  },
+  "m2x6": {
+   "img": "docs/assembly/img/part_m2x6.png",
+   "label": "M2 × 6 self-tapping",
+   "inventory": true
+  }
+ },
+ "cover": "docs/assembly/img/cover.png"
+}

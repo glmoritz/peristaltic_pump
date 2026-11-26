@@ -10,3 +10,4 @@ build/
 .west/
 twister-out*/
 cad/out/.gui_view.log
+cad/out/.instructions.log

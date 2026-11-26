@@ -6,9 +6,11 @@ files and the preview PNGs in `cad/out/` are regenerated, and the
 interference checks run.
 
 ```sh
-cad/build.sh              # both
-cad/build.sh pump         # pump head only
-cad/build.sh reservoir    # reservoir only
+cad/build.sh                 # everything (~2 min)
+cad/build.sh pump            # pump head only
+cad/build.sh reservoir       # reservoir only
+cad/build.sh electronics     # electronics housing + perfboard layout drawing
+cad/build.sh instructions    # LEGO-style assembly pages + PDF (docs/assembly/)
 ```
 
 The build uses `~/bin/FreeCAD_1.1.1-Linux-x86_64-py311.AppImage`. Override it
@@ -22,6 +24,11 @@ named `ref_*` are reference parts and are not printed.
 | `cadlib.py` | primitives, export, interference checks, matplotlib preview renderer |
 | `pump.py` | pump head: base, track inserts, rotor, sleeves, lid |
 | `reservoir.py` | reservoir: body, lid, strainer cage, sensor clip |
+| `electronics.py` | electronics housing (box + lid) bolted to the pump's back wall; perfboard stand-in |
+| `pcb_layout.py` | perfboard placement drawing → `docs/electronics/pcb_layout.png` (host Python) |
+| `guiutil.py` | GUI helpers: camera direction, render a scene to PNG |
+| `instructions.py` | renders the assembly steps and part thumbnails in FreeCAD (GUI, off-screen) |
+| `compose_instructions.py` | lays out the instruction pages and the PDF with PIL (host Python) |
 | `run.py` | runner (`freecadcmd` doesn't set `__name__ == "__main__"`) |
 | `gui_view.py` | second pass in the FreeCAD GUI (off-screen): colours, isometric camera, translucent lids, saved into the `.FCStd`, plus a FreeCAD screenshot |
 | `out/` | generated: `*.stl`, `*.step`, `*_assembly.FCStd`, `*.png` |
@@ -119,3 +126,21 @@ lift.
   - only **~80 mL (≈ 3 min at 1.5 L/h) between H and the lid**.
 - The pickup hose enters through the lid collar and plugs into the strainer
   cage. Nothing passes through the walls below the water line.
+
+## Electronics housing
+
+![electronics](out/electronics_assembly_freecad.png)
+
+| Part | Qty | Orientation / notes |
+|------|-----|---------------------|
+| `electronics_box` | 1 | back face (the face against the pump) on the bed |
+| `electronics_lid` | 1 | flat on the bed |
+
+Hardware: 2× M3 × 8 (box → pump inserts), 4× M2 × 6 self-tapping (board →
+studs), 4× M3 × 10 + 4 M3 heat-set inserts (lid). Wiring, BOM and bring-up:
+[docs/electronics.md](../docs/electronics.md).
+
+## Assembly instructions
+
+[docs/assembly/assembly_instructions.pdf](../docs/assembly/assembly_instructions.pdf):
+LEGO-style pages rendered from these models.

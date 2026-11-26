@@ -146,3 +146,48 @@ SENSOR_CLIP_SLOT = 10.0            # +-5 mm height adjustment
 SENSOR_CLIP_SCREW_DX = 16.5        # clip screws at +-16.5 mm beside the sensor centre
 SENSOR_L_FACE = ("-y", -15.0)      # L sensor on the -y wall, centred at x = -15
 SENSOR_H_FACE = ("+x", 12.0)       # H sensor on the +x wall, centred at y = +12
+
+# --------------------------------------------------------------------------
+# Electronics: perfboard + housing bolted to the pump head's +y (back) wall
+# --------------------------------------------------------------------------
+PERF_W = 70.0                  # 5 x 7 cm perfboard, landscape: u along x, v along z
+PERF_H = 50.0
+PERF_T = 1.6
+PERF_HOLE_INSET = 2.5          # [TBC] mounting-hole centres from the board edges
+PERF_HOLE_D = 2.0              # M2
+PERF_COMP_MAX_H = 20.0         # tallest part above the board (TMC2209 + heatsink on sockets)
+STUD_D = 6.0
+STUD_H = 6.0                   # leaves room for screw heads + solder joints behind the board
+STUD_PILOT = 1.8               # M2 self-tapping screw
+BOX_WALL = 2.5
+BOX_BACK = 3.0
+BOX_CLR = 2.0                  # board to inner wall
+BOX_LID_T = 2.5
+BOX_BOSS_D = 8.0               # lid screw bosses (hang from the lid side, clear of the board)
+BOX_MOUNT_X = 20.0             # 2x M3 into heat-set inserts in the pump's +y wall at x = +-20
+BOX_MOUNT_Z = 20.0             #   ... and z = 20 (pump coordinates)
+
+# Component placement on the perfboard (component side, installed upright:
+# v = 0 is the bottom edge, facing down; u = 0 is the left edge seen from the front).
+# name: (u0, v0, width_u, height_v, height_above_board, label)
+PCB_PARTS = {
+    "J1":  (6.0, 0.5, 10.2, 8.0, 10.0, "J1 PSU 19 V\nscrew terminal"),
+    "J3":  (18.0, 0.5, 9.9, 6.0, 7.0, "J3 SENSOR L\nJST-XH 3p"),
+    "J2":  (29.0, 0.5, 12.4, 6.0, 7.0, "J2 MOTOR\nJST-XH 4p"),
+    "J4":  (43.0, 0.5, 9.9, 6.0, 7.0, "J4 SENSOR H\nJST-XH 3p"),
+    "F1":  (6.0, 11.0, 6.0, 3.5, 10.0, "F1 PTC 1.1 A"),
+    "D1":  (6.0, 16.0, 11.0, 4.0, 5.0, "D1 1N5822"),
+    "D2":  (6.0, 21.5, 9.0, 3.0, 4.0, "D2 P6KE24A"),
+    "C1":  (18.0, 11.0, 8.0, 8.0, 13.0, "C1 100µF\n35 V"),
+    "RNL": (28.0, 11.0, 9.0, 10.0, 5.0, "R/C L"),
+    "RNH": (38.0, 11.0, 9.0, 10.0, 5.0, "R/C H"),
+    "U2":  (4.5, 28.0, 22.0, 17.0, 9.0, "U2 MP1584\nbuck → 5.0 V"),
+    "U3":  (29.0, 25.0, 15.2, 20.3, 20.0, "U3 TMC2209\n(on sockets)"),
+    "R1":  (45.0, 36.0, 2.5, 6.0, 3.0, "R1\n1k"),
+    "R2":  (45.0, 26.5, 2.5, 6.0, 3.0, "R2\n10k"),
+    "U1":  (47.5, 16.0, 22.5, 18.0, 13.0, "U1 ESP32-C3\nSuperMini (USB →)"),
+    "BZ1": (50.0, 36.0, 12.0, 12.0, 9.0, "BZ1 buzzer\n(optional)"),
+    "SW1": (56.0, 4.0, 6.0, 6.0, 5.0, "SW1\n(opt.)"),
+}
+BOX_SIDE_GAP = 8.0             # board edge to side wall: room for the lid-screw pillars
+BOX_LID_SCREW_Z = (-4.0, 33.0) # lid screws on both side pillars (pump z coordinates)

@@ -8,8 +8,12 @@ fit-all camera and saves the document again.
 import os
 import traceback
 
+import sys
+
 import FreeCAD as App
 import FreeCADGui as Gui
+
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
 OUT = os.path.join(os.path.dirname(os.path.abspath(__file__)), "out")
 # In GUI mode print() goes to the report view, so build.sh reads this log instead.
@@ -36,7 +40,25 @@ STYLE = [
     ("ref_bearing", (0.65, 0.65, 0.68), 0),
     ("ref_sleeve", (0.95, 0.95, 0.95), 0),
     ("ref_hose", (0.90, 0.35, 0.25), 0),
+    ("electronics_box", (0.35, 0.55, 0.85), 0),
+    ("electronics_lid", (0.35, 0.55, 0.85), 75),
+    ("ref_pump_lid", (0.75, 0.77, 0.80), 0),
+    ("ref_pump_base", (0.75, 0.77, 0.80), 0),
+    ("ref_perfboard", (0.20, 0.55, 0.30), 0),
+    ("ref_comp_U1", (0.15, 0.15, 0.18), 0),
+    ("ref_comp_U3", (0.55, 0.10, 0.55), 0),
+    ("ref_comp_U2", (0.10, 0.25, 0.65), 0),
+    ("ref_comp_C1", (0.10, 0.10, 0.10), 0),
+    ("ref_comp_J", (0.95, 0.95, 0.92), 0),
+    ("ref_comp", (0.30, 0.30, 0.32), 0),
+    ("ref_screw", (0.80, 0.80, 0.82), 0),
 ]
+
+
+from guiutil import ISO, BACK, set_view  # noqa: E402
+
+# camera look direction per assembly (default ISO: from +x -y +z, looking at the front)
+VIEW_DIR = {"electronics_assembly": BACK}
 
 
 def style(doc):
@@ -53,7 +75,7 @@ def style(doc):
 
 
 def main():
-    for name in ("pump_assembly", "reservoir_assembly"):
+    for name in ("pump_assembly", "reservoir_assembly", "electronics_assembly"):
         path = os.path.join(OUT, name + ".FCStd")
         if not os.path.exists(path):
             continue
@@ -62,7 +84,7 @@ def main():
         style(doc)
         view = Gui.getDocument(doc.Name).activeView()
         view.setCameraType("Perspective")
-        view.viewIsometric()
+        set_view(view, VIEW_DIR.get(name, ISO))
         view.fitAll()
         Gui.updateGui()
         try:   # FreeCAD's own render of the saved camera, to verify what opens

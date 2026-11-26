@@ -157,3 +157,50 @@ def render(path, items, elev=28, azim=-58, title=None, size=(9, 8), deflection=0
     fig.savefig(path)
     plt.close(fig)
     print(f"  preview -> {os.path.relpath(path)}")
+
+
+# --------------------------------------------------------------------------
+# fastener stand-ins (assembly instructions only)
+# --------------------------------------------------------------------------
+def screw(base, direction, d, length, head_d=None, head_h=None, countersunk=False):
+    """Screw whose head sits at `base` and whose shank runs along `direction`."""
+    dv = V(*direction).normalize()
+    b = V(*base)
+    head_d = head_d or 1.8 * d
+    head_h = head_h or (0.6 * d if countersunk else 0.9 * d)
+    shank = Part.makeCylinder(d / 2, length, b, dv)
+    if countersunk:
+        head = Part.makeCone(head_d / 2, d / 2, head_h, b - dv * 0.0, dv)
+    else:
+        head = Part.makeCylinder(head_d / 2, head_h, b - dv * head_h, dv)
+    return shank.fuse(head)
+
+
+def grub(base, direction, d=3.0, length=8.0):
+    return Part.makeCylinder(d / 2, length, V(*base), V(*direction).normalize())
+
+
+def heat_insert(top, direction, d, length):
+    """Knurl-ish insert: top face at `top`, body runs along `direction` into the part."""
+    dv = V(*direction).normalize()
+    body = Part.makeCylinder(d / 2, length, V(*top), dv)
+    bore = Part.makeCylinder(d / 2 - 0.7, length + 2, V(*top) - dv, dv)
+    return body.cut(bore)
+
+
+def nut(center, af=5.5, t=2.4):
+    return hexagon_prism(af, center[2] - t / 2, center[2] + t / 2, center[0], center[1]).cut(
+        Part.makeCylinder(1.5, t + 2, V(center[0], center[1], center[2] - t / 2 - 1), V(0, 0, 1)))
+
+
+def arrow(start, end, r=0.9, head_r=2.6, head_l=6.0):
+    """Solid arrow from start to end (for exploded-view instructions)."""
+    s, e = V(*start), V(*end)
+    d = e - s
+    L = d.Length
+    if L < head_l + 2:
+        return None
+    u = V(d).normalize()
+    shaft = Part.makeCylinder(r, L - head_l, s, u)
+    head = Part.makeCone(head_r, 0.01, head_l, s + u * (L - head_l), u)
+    return shaft.fuse(head)

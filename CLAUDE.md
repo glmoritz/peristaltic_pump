@@ -19,11 +19,25 @@ behind the AC indoor unit.
 
 ## State (2026-11-25)
 
-- Phase: **CAD v1 done** for the pump head and the reservoir (`cad/`; see
-  `cad/README.md`). Nothing has been printed yet. Design doc v0.8.
-- Build all CAD with `cad/build.sh` (headless FreeCAD). It regenerates
-  STL/STEP/FCStd and the preview PNGs into `cad/out/` and runs the
-  interference checks. Edit dimensions only in `cad/params.py`.
+- Phase: **prototype v1 fully designed, nothing printed yet**. Design doc
+  v0.9.
+  - CAD (`cad/`): pump head, reservoir, and the electronics housing on the
+    pump's back wall.
+  - Electronics: `docs/electronics.md`, a 5 × 7 cm perfboard with its layout
+    in `PCB_PARTS`.
+  - LEGO-style assembly instructions: `docs/assembly/`, as a PDF and PNG
+    pages.
+- Build everything with `cad/build.sh` (headless FreeCAD, ~2 min). It
+  regenerates the STL/STEP/FCStd files and previews, runs the interference
+  checks, makes the perfboard drawing, re-renders the instructions and rebuilds
+  the PDF.
+  - Edit dimensions only in `cad/params.py`. The perfboard placement is
+    `PCB_PARTS` there, and the housing openings follow it.
+- GUI-only work (colours, saved camera, instruction renders) runs the FreeCAD
+  GUI off-screen with `QT_QPA_PLATFORM=offscreen`. In GUI mode `print()` is
+  invisible, so those scripts log to `cad/out/.*.log`.
+- Camera direction: set it through `guiutil.set_view` (Coin orientation).
+  `setViewDirection` does not work there because of the view animation.
 - CAD facts that are easy to forget:
   - each roller = **2 stacked 608** (14 mm), because the hose is wider than
     one bearing;
@@ -64,8 +78,9 @@ behind the AC indoor unit.
   1. The user prints and tests the pump head (torque test, choose the gap
      insert) and the reservoir (watertightness). Feed the results back into
      `params.py` and design.md.
-  2. The electronics enclosure (CAD), once the buck, driver and ESP32 layout is
-     settled.
+  2. The user solders the perfboard (docs/electronics.md). Verify the [TBC]
+     pin orders against the module silkscreens and the perfboard hole
+     inset/diameter.
   3. Firmware (deferred): a new MQTT/HA layer, after the Zephyr upgrade.
 
 ## Decisions already made by the user (don't re-ask)

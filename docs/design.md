@@ -1,6 +1,6 @@
 # Quiet Condensate Peristaltic Pump — Design Document
 
-Status: **draft v0.8** (2026-11-25) — requirements, concept and CAD v1 (see `cad/`).
+Status: **draft v0.9** (2026-11-25) — requirements, concept, CAD v1 (`cad/`), electronics ([electronics.md](electronics.md)) and assembly instructions ([assembly/](assembly/README.md)).
 This file is the single source of truth for the project and will evolve until
 the working prototype. Values marked **[TBC]** are assumptions waiting for a
 measurement or confirmation; see [Open questions](#11-open-questions).
@@ -364,6 +364,11 @@ If the space is tight, the options are:
 
 ## 5. Electronics
 
+> **Build details:** the perfboard layout, connections, BOM, housing and bring-up are
+> in **[electronics.md](electronics.md)**. The perfboard uses through-hole parts:
+> a **P6KE24A** TVS instead of the SMBJ22A, a **PTC 1.1 A** resettable fuse,
+> a **1N5822** Schottky for reverse polarity, and an R2 10 k pull-up on EN.
+
 ### 5.1 Block diagram
 
 ```
@@ -657,7 +662,21 @@ Proposed entities:
   1. Pump head, **done (v1, 2026-11-25)**. First print: base, rotor, and the
      3 track inserts, to tune occlusion and torque.
   2. Reservoir, **done (v1, 2026-11-25)**.
-  3. Electronics enclosure, still to do.
+  3. Electronics enclosure, **done (v1, 2026-11-25)**.
+- **Electronics housing (v1, 2026-11-25)**: `cad/electronics.py`.
+  - A 91 × 35 × 59 mm box bolted to the pump head's **+y (back) wall** with
+    2× M3 into heat-set inserts (added to `pump_base`).
+  - It holds a 5 × 7 cm perfboard on 4 printed M2 studs.
+  - Cable holes are in the bottom, USB-C is on the side, and the vents are in
+    the front lid. There are no openings on top.
+- **Assembly instructions (LEGO style)**: `cad/instructions.py` renders every
+  step in FreeCAD from the same models, and `cad/compose_instructions.py`
+  lays out the pages. The result is
+  **[assembly/assembly_instructions.pdf](assembly/assembly_instructions.pdf)**:
+  a cover, a parts inventory and 18 steps.
+- **Perfboard layout drawing**: `cad/pcb_layout.py` →
+  `docs/electronics/pcb_layout.png`, drawn from the same `PCB_PARTS` table as
+  the housing.
 - **CAD assumptions to verify on the bench** (all are parameters in
   `cad/params.py`):
   - `STOCK_HUB_Z0` = 1.0: gap between the motor face and the bottom of the
@@ -708,3 +727,4 @@ Proposed entities:
 | 2026-11-25 | 0.6 | Motor: 31 mm hole pattern (NEMA 17-compatible), Ø16.8 × 11 mm hub on the shaft, no rating (estimate from coil resistance plus bench tuning). Interchangeable clamp hub insert; mount and base sized so a NEMA 17 can drop in if needed (user decision). CAD unblocked |
 | 2026-11-25 | 0.7 | PSU: 19 V 2.1 A, 90 × 37 × 26 mm brick. Buck fixed to MP1584, TVS changed to SMBJ22A, brick added to the envelope |
 | 2026-11-25 | 0.8 | **CAD v1**: parametric FreeCAD scripts for the pump head and reservoir (`cad/`). Rollers = 2 stacked 608 each (hose wider than one bearing). Motor interface integrated into the lower rotor disc (stock / NEMA 17 variants). Reservoir: flat floor + strainer cage, dip-tube pickup through the lid, clip-mounted sensors at 13 / 24 mm, volumes computed |
+| 2026-11-25 | 0.9 | Electronics: 5 × 7 cm perfboard layout and connections, through-hole protection parts, sensor input network for NPN/push-pull/PNP, bring-up procedure (`electronics.md`). Printed housing on the pump's back wall (`cad/electronics.py`). LEGO-style assembly instructions rendered from the CAD (`docs/assembly/`) |

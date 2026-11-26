@@ -52,6 +52,11 @@ def make_base():
         for y in (-P.LID_SCREW_XY, P.LID_SCREW_XY):
             s = s.cut(cyl(P.INSERT_M3_D / 2, P.Z_LID - P.INSERT_M3_L, P.Z_LID + 1, x, y))
 
+    # electronics box mount: 2x M3 heat-set inserts in the +y (back) wall
+    for sx in (-1, 1):
+        s = s.cut(cyl_dir(P.INSERT_M3_D / 2, P.INSERT_M3_L + 0.01,
+                          (sx * P.BOX_MOUNT_X, H + 0.01, P.BOX_MOUNT_Z), (0, -1, 0)))
+
     # hose saddles: round-bottom U-slots through the -y wall, bottom = hose bottom
     r_slot = P.HOSE_SADDLE_W / 2
     z_c = P.Z_HOSE - P.HOSE_OD / 2 + r_slot
