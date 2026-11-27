@@ -1,6 +1,6 @@
 # Quiet Condensate Peristaltic Pump — Design Document
 
-Status: **draft v0.9** (2026-11-25) — requirements, concept, CAD v1 (`cad/`), electronics ([electronics.md](electronics.md)) and assembly instructions ([assembly/](assembly/README.md)).
+Status: **draft v0.10** (2026-11-27) — requirements, concept, CAD v1 (`cad/`), electronics ([electronics.md](electronics.md)) and assembly instructions ([assembly/](assembly/README.md)).
 This file is the single source of truth for the project and will evolve until
 the working prototype. Values marked **[TBC]** are assumptions waiting for a
 measurement or confirmation; see [Open questions](#11-open-questions).
@@ -515,36 +515,43 @@ DRAIN  : q_p = k_hi · q̂_in   (k_hi ≈ 1.25)  level falls  H→L in t_down
 The firmware reuses the user's Zephyr environment: the course container repo
 at `~/00_tmp/zephyr/introduction-to-zephyr`, which was surveyed on 2026-11-25.
 
-**Decision (2026-11-25):** the Zephyr version is **not frozen**. The user will
-update the container to a newer Zephyr before the firmware starts. Re-verify
-the items below on the new version: the stepper API was being reworked, and a
-newer `adi,tmc2209` may even gain UART support. Firmware work, including the
-new MQTT + HA discovery layer, is **deferred**.
+**Decision (2026-11-27):** the container is upgraded to the **Zephyr v4.5.0
+release** (`41d10b59`, 2026-10-28; SDK 1.0.1 unchanged), before any firmware
+is written. The previous pin was 4.5.0-dev @ `fbfc5f19`. The image is built on
+the lab workstation (pcut) as `zephyr-moritz:4.5.0`, because the home machine's
+disk is full.
 
-- **Dev container**: `.devcontainer` builds `Dockerfile.moritz`, which pins
-  **Zephyr 4.5.0-dev @ `fbfc5f19`** with SDK 1.0.1. The newest local image,
-  `vsc-introduction-to-zephyr-a5b93…` from 2026-05-28, was verified to have:
-  - the **`riscv64-zephyr-elf`** toolchain, which the ESP32-C3 needs because it
-    is RISC-V, not Xtensa;
+- **Dev container**: `.devcontainer` builds `Dockerfile.moritz`. The v4.5.0
+  tree was checked on 2026-11-27 and has:
   - the in-tree board **`esp32c3_supermini`** (`boards/others/`);
-  - the **`adi,tmc2209`** stepper driver under the new split API
-    (`stepper.h` + `stepper_ctrl.h`, step/dir in `drivers/stepper/step_dir`);
-  - the **MQTT** client library (`subsys/net/lib/mqtt`).
-
-  The older `env-zephyr-espressif:latest` image is Zephyr 4.3.0, so don't use
-  it.
+  - the **`adi,tmc2209`** driver (`drivers/stepper/adi_tmc/tmc22xx`), still
+    **GPIO-only, no UART** → the two-phase plan below stands. It uses the
+    split stepper API (`stepper.h` + `stepper_ctrl.h`);
+  - the **MQTT** client library (`subsys/net/lib/mqtt`);
+  - the **`riscv64-zephyr-elf`** toolchain comes from SDK 1.0.1, as before.
+- **Effect on `hello_eink`** (it shares the image): 4 of its 6 Zephyr patches
+  still apply. The other 2 are obsolete and were removed:
+  `ipv6_nbr_ns_pending_leak` is fixed upstream (v4.5.0 has the same
+  `net_pkt_unref`), and `tls_session_export` had already been replaced by the
+  upstream `CONFIG_NET_SOCKETS_TLS_SESSION_CACHE_PERSISTENT`.
 - **Workspace convention** (from the repo's `workspace/AGENTS.md`):
   - product apps live in `/workspace/projects/<name>`, each its own git repo;
   - shared manifest `/workspace/west.yml`;
   - the helper `/workspace/scripts/zephyr-project.sh set|build|flash|openocd`;
   - a per-project `.board` file and optional `debug.conf`;
   - app-owned `boards/`, `modules/` and `patches/`.
-- `zephyr-project.sh` **hardcodes the Xtensa ESP32-S3 gdb/gcc symlinks** and
-  will need to be generalised for RISC-V (C3) gdb and OpenOCD.
-- **Where the firmware lives [TBC Q13]**: the container only mounts
-  `workspace/`. Recommendation: keep the firmware in this repo under
-  `firmware/`, and clone this repo to `workspace/projects/peristaltic_pump`
-  (or add a bind mount).
+- On `main`, `zephyr-project.sh` **hardcodes the Xtensa ESP32-S3 gdb/gcc
+  symlinks**. The `esp32c6-support` branch of `zephyr_container` (checked out
+  on pcut) already generalises it for RISC-V (ESP32-C6). Merge that branch
+  into `main` and reuse it for the C3.
+- **Where the firmware lives (decided 2026-11-27, Q13):** in **this repo**,
+  under `firmware/`. The repo is the inner project at
+  `zephyr_container/workspace/projects/peristaltic_pump`, gitignored by the
+  outer repo the same way as `hello_eink`.
+  - On the home machine the repo was moved there, and
+    `~/00_tmp/peristaltic_pump` is a symlink to it. The container only mounts
+    `workspace/`, so a symlink in the other direction would not work.
+  - On pcut it is a clone in `~/00_tmp/zephyr_container/workspace/projects/`.
 
 #### Reuse from `hello_eink`
 
@@ -562,10 +569,13 @@ new MQTT + HA discovery layer, is **deferred**.
   pump this is ideal: a simulated tank (inflow profile + pump + two
   thresholds) can exercise the whole control state machine on the host before
   any hardware exists.
-- **Long-uptime network fixes**: the repo carries patches for socket recvq
-  close-race and IPv6 NS netbuf leaks (`sockets_inet_recvq_close_race_leak.patch`,
-  `pr_*.md`). The pump runs 24/7 on MQTT, so check whether they are upstream at
-  the pinned commit and carry them if not.
+- **Long-uptime network fixes**: the pump runs 24/7 on MQTT, so it carries
+  `hello_eink`'s still-needed Zephyr patches. On v4.5.0 these are the
+  sockets recvq close-race leak, the Ethernet mcast NULL guard, and the telnet
+  stale-client fix; the mbedTLS session-tickets one is only needed for TLS.
+  The IPv6 NS leak is fixed upstream in v4.5.0. Copy the patches into
+  `firmware/patches/`. Note that `zephyr-project.sh` applies them to the shared
+  `/opt/toolchains/zephyr` for the container's lifetime.
 - **No MQTT / HA-discovery code exists there.** `hello_eink` talks HTTP to
   LLSS. The MQTT + HA discovery layer is new work, unless the user points to
   another project (Q13).
@@ -696,7 +706,8 @@ Proposed entities:
 | Q5 | Hose | 4×7 silicone hose runs **continuously to the drain** |
 | Q7 | Failure action | **Notify Home Assistant**. Later: HA automation turns the LG AC off via its Wi-Fi |
 | Q8 | Lid fixing | **4× M3 screws** into heat-set inserts |
-| Q9 | Firmware | **Zephyr + MQTT + HA MQTT discovery**, built in the existing `introduction-to-zephyr` dev container. Zephyr will be **upgraded** (not frozen at 4.5.0-dev @ fbfc5f19) |
+| Q9 | Firmware | **Zephyr + MQTT + HA MQTT discovery**, built in the existing `zephyr_container` dev container, **upgraded to Zephyr v4.5.0** (2026-11-27) |
+| Q13 | Firmware location | **`firmware/` in this repo**. The repo is the inner project at `zephyr_container/workspace/projects/peristaltic_pump` (2026-11-27) |
 | Q13a | MQTT/HA code | **Written new** for this project (no existing code to reuse). Deferred, not now |
 | Q3 | PSU | **19 V, 2.1 A**, brick 90 × 37 × 26 mm → MP1584 buck, SMBJ22A TVS, 1 A fuse |
 | Q6 | Bearings | **608 confirmed** (22 × 7 × 8 mm), 10 pcs |
@@ -711,7 +722,6 @@ Proposed entities:
 | Q10 | **Wall recess** (deferred, the wall is not being opened now): W × H × D, where the AC drain hose enters, where the drain outlet is, how it is accessed for maintenance, and whether a **taller reservoir** fits | Final envelope, overflow margin, pump head placement |
 | Q11 | **TMC2209 module** (16-pin StepStick with micropot, known). Still needed: the pin labels printed on it (is it `PDN`/`UART` or `RX`/`TX`?), any extra pins on top (DIAG/INDEX), the brand/version printed on it, and the sense resistor marking (R100/R110) | VREF formula, phase 2 UART wiring, DIAG availability |
 | Q12 | Add a 3rd sensor or a float switch as an independent overflow input? | No hardware AC cut-off exists, so an overflow spills inside the wall |
-| Q13 | Where should the firmware live: `firmware/` in this repo (cloned into `workspace/projects/`), or a separate repo? (Decide when firmware starts.) | Container mount |
 | Q14 | AC drain hose: ID/OD where it enters the reservoir lid | Inlet fitting |
 | — | Masterflow 20: caliper-confirm the values in section 4.6 | Reference envelope |
 
@@ -728,3 +738,4 @@ Proposed entities:
 | 2026-11-25 | 0.7 | PSU: 19 V 2.1 A, 90 × 37 × 26 mm brick. Buck fixed to MP1584, TVS changed to SMBJ22A, brick added to the envelope |
 | 2026-11-25 | 0.8 | **CAD v1**: parametric FreeCAD scripts for the pump head and reservoir (`cad/`). Rollers = 2 stacked 608 each (hose wider than one bearing). Motor interface integrated into the lower rotor disc (stock / NEMA 17 variants). Reservoir: flat floor + strainer cage, dip-tube pickup through the lid, clip-mounted sensors at 13 / 24 mm, volumes computed |
 | 2026-11-25 | 0.9 | Electronics: 5 × 7 cm perfboard layout and connections, through-hole protection parts, sensor input network for NPN/push-pull/PNP, bring-up procedure (`electronics.md`). Printed housing on the pump's back wall (`cad/electronics.py`). LEGO-style assembly instructions rendered from the CAD (`docs/assembly/`) |
+| 2026-11-27 | 0.10 | Firmware bootstrap prep. The repo becomes the inner project in `zephyr_container/workspace/projects/` (Q13 decided: `firmware/` here). The container is upgraded to Zephyr **v4.5.0** (`41d10b59`) and the image is built on pcut. C3 board, `adi,tmc2209` (still GPIO-only) and MQTT re-verified on v4.5.0. 2 of `hello_eink`'s patches are obsolete (one fixed upstream, one replaced by an upstream feature) |
