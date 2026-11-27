@@ -1,0 +1,45 @@
+mainmenu "Peristaltic condensate pump"
+
+menu "Pump"
+
+config PUMP_SIM
+	bool "Simulated reservoir and motor"
+	default y if BOARD_NATIVE_SIM
+	help
+	  Replace the TMC2209 and the level sensors with a simulated
+	  reservoir (design.md §4.7 volumes) and motor. The control code is
+	  the same as on the device.
+
+config PUMP_TICK_MS
+	int "Control loop period (ms)"
+	default 100
+
+config PUMP_DEBOUNCE_MS
+	int "Level sensor debounce (ms)"
+	default 2000
+	help
+	  A sensor must hold a new state this long before it counts. Rejects
+	  ripples on the water surface (design.md §5.3).
+
+config PUMP_STEPS_PER_REV
+	int "Motor full steps per revolution"
+	default 200
+
+config PUMP_MICROSTEPS
+	int "Microsteps per full step"
+	default 8
+	help
+	  Must match the TMC2209 MS1/MS2 strapping. Both open = 8
+	  (electronics.md §4).
+
+config PUMP_SIM_EFFICIENCY_PCT
+	int "Simulated real/believed pump displacement (%)"
+	depends on PUMP_SIM
+	default 85
+	help
+	  The simulated pump moves this fraction of what the firmware thinks
+	  it moves, to exercise the estimator against an uncalibrated V_rev.
+
+endmenu
+
+source "Kconfig.zephyr"

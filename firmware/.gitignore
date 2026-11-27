@@ -1,0 +1,4 @@
+build/
+build-*/
+build-*.log
+tests/host/test_control

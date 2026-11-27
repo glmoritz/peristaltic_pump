@@ -19,8 +19,9 @@ behind the AC indoor unit.
 
 ## State (2026-11-27)
 
-- Phase: **prototype v1 fully designed, nothing printed yet; firmware bootstrap starting**. Design doc
-  v0.10.
+- Phase: **prototype v1 fully designed, nothing printed yet. Firmware M1
+  done** (local control, simulator, shell; builds for the C3 and native_sim).
+  Design doc v0.11.
   - CAD (`cad/`): pump head, reservoir, and the electronics housing on the
     pump's back wall.
   - Electronics: `docs/electronics.md`, a 5 × 7 cm perfboard with its layout
@@ -69,8 +70,14 @@ behind the AC indoor unit.
   the Masterflow **square reservoir**, about 87 × ~78 × 42 mm (48.5 mm with
   the spigot); see design.md §4.6. The pump head is a separate block joined
   only by the hose.
-- Firmware: the bootstrap starts now, on **Zephyr v4.5.0** (upgraded
-  2026-11-27). The MQTT + HA discovery layer is written new.
+- Firmware (`firmware/`, README there), on **Zephyr v4.5.0**:
+  - `control.c` is plain C; its closed-loop host test is
+    `make -C firmware/tests/host`. Run it after any control change.
+  - Build in the container: `west build -b esp32c3_supermini|native_sim`.
+    The simulator runs with `zephyr.exe -uart_stdinout` and the `sim …`
+    commands.
+  - M2 (Wi-Fi + MQTT/HA discovery, written new) and M3 (TMC2209 UART) are
+    next.
 - Next steps:
   1. The user prints and tests the pump head (torque test, choose the gap
      insert) and the reservoir (watertightness). Feed the results back into
@@ -78,8 +85,10 @@ behind the AC indoor unit.
   2. The user solders the perfboard (docs/electronics.md). Verify the [TBC]
      pin orders against the module silkscreens and the perfboard hole
      inset/diameter.
-  3. Firmware: bootstrap `firmware/` (hello_eink-style app, `native_sim` tank
-     simulation, then the MQTT/HA layer).
+  3. Firmware M2: copy `wifi_prov` from hello_eink, add MQTT + HA discovery
+     (entities in design.md §6.5) and night mode (NTP).
+  4. On the bench: sensor polarity (Q2), rotor direction, V_rev calibration
+     (firmware/README.md).
 
 ## Decisions already made by the user (don't re-ask)
 
@@ -106,8 +115,16 @@ behind the AC indoor unit.
     RISC-V helper/OpenOCD work that `main` lacks), with a clone of this repo in
     `workspace/projects/`.
 - Container: `Dockerfile.moritz` is pinned to **Zephyr v4.5.0 @ `41d10b59`**,
-  SDK 1.0.1, built on pcut as `zephyr-moritz:4.5.0`. The old 4.5.0-dev
-  (`fbfc5f19`) images on pccasa were deleted.
+  SDK 1.0.1, built on pcut as `zephyr-moritz:4.5.0` (15.9 GB). The old
+  4.5.0-dev (`fbfc5f19`) images on pccasa were deleted.
+  - The SDK is fetched with curl and only these toolchains are installed:
+    arm, riscv64, xtensa esp32/s2/s3 (ARG `ZEPHYR_SDK_TOOLCHAINS`).
+  - **The lab network (pcut) resets many GitHub release-asset downloads.**
+    Download the SDK files on pccasa and put them in `sdk-cache/` in the
+    build context; the Dockerfile uses them and checks sha256.
+  - Building by hand on pcut:
+    `docker run --rm -v ~/00_tmp/zephyr_container/workspace:/workspace --entrypoint bash zephyr-moritz:4.5.0`,
+    then `source /opt/venv/bin/activate; source /opt/toolchains/zephyr/zephyr-env.sh`.
 - Verified in the v4.5.0 tree:
   - the in-tree `esp32c3_supermini` board;
   - the `adi,tmc2209` driver, still **GPIO-only, no UART** → phase 1

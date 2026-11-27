@@ -1,6 +1,6 @@
 # Quiet Condensate Peristaltic Pump — Design Document
 
-Status: **draft v0.10** (2026-11-27) — requirements, concept, CAD v1 (`cad/`), electronics ([electronics.md](electronics.md)) and assembly instructions ([assembly/](assembly/README.md)).
+Status: **draft v0.11** (2026-11-27) — requirements, concept, CAD v1 (`cad/`), electronics ([electronics.md](electronics.md)) and assembly instructions ([assembly/](assembly/README.md)).
 This file is the single source of truth for the project and will evolve until
 the working prototype. Values marked **[TBC]** are assumptions waiting for a
 measurement or confirmation; see [Open questions](#11-open-questions).
@@ -488,13 +488,31 @@ DRAIN  : q_p = k_hi · q̂_in   (k_hi ≈ 1.25)  level falls  H→L in t_down
 
 | Situation | Detection | Action |
 |-----------|-----------|--------|
-| Inflow rose (pump too slow) | in DRAIN, H still wet after `T_drain` (≈ 2× expected t_down, minimum 10 min) | raise `q̂_in` ×1.5 and stay in DRAIN; repeat |
-| **Emergency** | H wet and not clearing after `T_emerg` (≈ 10 min at the raised speed), or H wet while already at max normal speed | **full speed** until L dry, then go back to normal with `q̂_in` = the measured value; HA event `emergency` |
-| **Pump failure** (hose burst or slipped, motor stall, clog) | still H wet after `T_fail` (≈ 5 min) **at full speed** | **ALARM → HA `problem` binary sensor ON** (+ local buzzer). Future: HA automation turns the LG AC off |
-| AC switched off / inflow dropped | in FILL, L goes dry, or L stays dry for `T_idle` | **stop the motor** (no water = no reason to run, avoids gurgling); lower `q̂_in`; restart at `k_lo · q̂_in` when L is wet again |
-| Sensor fault | L dry + H wet, or a sensor stuck for days while the AC runs | alarm, run at a conservative fixed speed (e.g. 3 L/h) |
+| Inflow rose (pump too slow) | in DRAIN, **H wet again** after it had dried (so q_in > k_hi·q̂) | q̂ := k_hi·q̂ at once, stay in DRAIN |
+| Inflow rose a lot | in DRAIN, H **continuously** wet for `t_drain_s` (60 s). While H is wet, DRAIN already runs at `k_hwet`·q̂ (2×) | q̂ ×1.5 (`boost_factor`), once (`max_boosts`) |
+| **Emergency** | H still continuously wet `t_drain_s` after the boost | **full speed** (`q_emerg_mlh`, 12 L/h, fast ramp) until L dry, then FILL. The fall measurement is blended into q̂ like any other, and the fast ramp is held 30 s so the speed drops at once; HA event `emergency` |
+| **Pump failure** (hose burst or slipped, motor stall, clog) | still H wet `t_fail_s` (45 s) **at full speed** | **ALARM → HA `problem` binary sensor ON** (+ local buzzer). Cleared when H dries. Future: HA automation turns the LG AC off |
+| Inflow dropped | in FILL, **L dries again** after it had been wet (so q_in < k_lo·q̂) | q̂ := k_lo·q̂ |
+| AC switched off | in FILL with L dry: **50 mL pumped** (`v_below_l_ml`, of the 77 mL below L) or `t_idle_s` (10 min), whichever first | **stop the motor** (IDLE, avoids drawing air and gurgling); q̂ ×0.7 (`idle_factor`); restart at k_lo·q̂ when L is wet again |
+| Sensor fault | L dry + H wet for `t_sensor_fault_s` (30 s) | alarm. **Latched** until L is seen wet again (a stuck-dry L would otherwise clear it every time H dries). Meanwhile only H is trusted: `q_safe_mlh` (3 L/h) while H is wet, else q̂ |
 | Driver fault | TMC2209 UART reports overtemperature, short or open load | alarm |
 | Lost Wi-Fi / MQTT | — | the control loop is **fully local** and never depends on the network; it reconnects in the background |
+
+**Why the timeouts are short (firmware v1, 2026-11-27).** The reservoir has
+only **81 mL above H** (§4.7): with a dead pump that is ~194 s at 1.5 L/h and
+~146 s at 2 L/h. The original 5–10 min timeouts would raise the alarm only
+after the overflow. With the defaults above, a dead pump at 1.5 L/h gives:
+H wet → boost at 60 s → emergency at 120 s → **problem at ~138 s**. That is
+before the overflow at 1.5 L/h, and only just before it at 2 L/h. The alarm
+only notifies, so a **taller reservoir (Q10)** remains the real fix.
+
+These rules were tuned against a closed-loop simulation
+(`firmware/tests/host`: reservoir volumes from the CAD, sensor hysteresis, 2 s
+debounce, the speed ramp, and a pump that moves 15 % less than V_rev says).
+It runs steady inflow, steps with the AC off, a 0.4–1.6 L/h inverter
+sinusoid (0 emergencies in 48 h), a dead pump, a stuck sensor and a night cap
+below the inflow. Night mode caps FILL and H-dry DRAIN only, never below
+1.1·q̂ in DRAIN, and never while H is wet.
 
 ### 6.4 Extras
 
@@ -552,6 +570,34 @@ disk is full.
     `~/00_tmp/peristaltic_pump` is a symlink to it. The container only mounts
     `workspace/`, so a symlink in the other direction would not work.
   - On pcut it is a clone in `~/00_tmp/zephyr_container/workspace/projects/`.
+
+#### Firmware v1 (milestone 1, 2026-11-27)
+
+`firmware/` (see its README) builds without warnings for **`esp32c3_supermini`**
+(215 KB, 5 % of flash) and **`native_sim`**. It contains:
+
+- the control loop of §6, in plain C (`control.c`), with the timeouts in §6.3;
+- the TMC2209 on Zephyr's CPU step/dir controller, timed by timer group 0
+  (1 µs resolution);
+- the two sensors with the 2 s debounce;
+- tunables, q̂ and counters in settings/NVS;
+- a `pump` / `sim` shell;
+- a simulated reservoir on native_sim.
+
+On native_sim, a dead pump at 1.5 L/h went H wet → boost (+60 s) →
+EMERGENCY (+120 s) → PROBLEM (+165 s), as in the host test.
+
+- **v4.5.0 detail**: the ESP32 counter device is the `counter` *child* of
+  `timer0` (`espressif,esp32-counter`), and the prescaler sits on the parent.
+- **Logging**: console log backends only (UART / host stdout), with the
+  shell's log backend off. Otherwise every line prints twice or the boot log
+  is lost.
+- **Next**: M2 adds Wi-Fi provisioning (`wifi_prov`), MQTT + HA discovery and
+  the night-mode schedule (NTP); M3 adds the TMC2209 UART module.
+- **To check on the bench**:
+  - sensor polarity (Q2; the overlay assumes NPN, wet = low);
+  - rotor direction;
+  - V_rev calibration (`pump manual` into a cup).
 
 #### Reuse from `hello_eink`
 
@@ -739,3 +785,4 @@ Proposed entities:
 | 2026-11-25 | 0.8 | **CAD v1**: parametric FreeCAD scripts for the pump head and reservoir (`cad/`). Rollers = 2 stacked 608 each (hose wider than one bearing). Motor interface integrated into the lower rotor disc (stock / NEMA 17 variants). Reservoir: flat floor + strainer cage, dip-tube pickup through the lid, clip-mounted sensors at 13 / 24 mm, volumes computed |
 | 2026-11-25 | 0.9 | Electronics: 5 × 7 cm perfboard layout and connections, through-hole protection parts, sensor input network for NPN/push-pull/PNP, bring-up procedure (`electronics.md`). Printed housing on the pump's back wall (`cad/electronics.py`). LEGO-style assembly instructions rendered from the CAD (`docs/assembly/`) |
 | 2026-11-27 | 0.10 | Firmware bootstrap prep. The repo becomes the inner project in `zephyr_container/workspace/projects/` (Q13 decided: `firmware/` here). The container is upgraded to Zephyr **v4.5.0** (`41d10b59`) and the image is built on pcut. C3 board, `adi,tmc2209` (still GPIO-only) and MQTT re-verified on v4.5.0. 2 of `hello_eink`'s patches are obsolete (one fixed upstream, one replaced by an upstream feature) |
+| 2026-11-27 | 0.11 | **Firmware v1 (M1)** in `firmware/`: control loop, TMC2209 step/dir on a hardware timer, debounced sensors, settings/NVS, shell, native_sim reservoir simulator, gcc-only closed-loop tests. §6.3 rewritten from the tests: shorter escalation (81 mL above H), H-rewet/L-redry bounds on q̂, a 50 mL volume budget below L, a latched sensor fault, and a night cap that never blocks draining. Dev image: SDK fetched with curl or from a local `sdk-cache/`, because the lab network resets GitHub release downloads |
