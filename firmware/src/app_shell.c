@@ -1,12 +1,18 @@
 /* Shell: `pump ...` on every build, `sim ...` on native_sim. */
 
 #include <stdlib.h>
+#include <string.h>
 #include <errno.h>
 
+#include <zephyr/kernel.h>
 #include <zephyr/shell/shell.h>
 
 #include "app.h"
+#include "cmnd.h"
+#include "pumpnet.h"
 #include "params.h"
+#include "timesync.h"
+#include "wifi_prov.h"
 #ifdef CONFIG_PUMP_SIM
 #include "sim.h"
 #endif
@@ -37,8 +43,22 @@ static int cmd_status(const struct shell *sh, size_t argc, char **argv)
 		    (double)st.q_cmd_mlh, (double)st.flow_mlh, (double)st.rpm);
 	shell_print(sh, "totals     %.2f L pumped, hose %.0f rev%s", st.total_ml / 1000.0,
 		    st.hose_revs, st.hose_worn ? " (REPLACE HOSE)" : "");
-	shell_print(sh, "problem    %s%s", st.problem ? "PUMP FAILURE" : "no",
-		    st.sensor_fault ? ", SENSOR FAULT" : "");
+	shell_print(sh, "problem    %s%s%s", st.problem ? "PUMP FAILURE" : "no",
+		    st.sensor_fault ? ", SENSOR FAULT" : "", st.muted ? " (buzzer muted)" : "");
+	shell_print(sh, "night cap  %s", st.night ? "active" : "off");
+	if (st.calibrating || st.calib_revs > 0.0f) {
+		shell_print(sh, "calibrate  %s, last run %.2f rev",
+			    st.calibrating ? "RUNNING" : "idle", (double)st.calib_revs);
+	}
+
+	struct pumpnet_stats ns;
+	char t[24];
+
+	pumpnet_get_stats(&ns);
+	timesync_format(g_par.tz_h, t, sizeof(t));
+	shell_print(sh, "network    Wi-Fi %s %s, MQTT %s (%u connects), time %s",
+		    wifi_prov_get_ssid(), wifi_prov_get_ip(), ns.mqtt_up ? "up" : "down",
+		    ns.mqtt_connects, t[0] ? t : "not set");
 	return 0;
 }
 
@@ -107,6 +127,43 @@ static int cmd_save(const struct shell *sh, size_t argc, char **argv)
 	app_save();
 	return 0;
 }
+
+static void list_one(void *ctx, const char *name, const char *help)
+{
+	shell_print((const struct shell *)ctx, "  %-16s %s", name, help);
+}
+
+/* cmnd <Command> [payload...]: the MQTT command set (cmnd.h). The buffers
+ * are static (shell stacks are small) and shared by the serial and telnet
+ * shells, hence the mutex. */
+static K_MUTEX_DEFINE(cmnd_lock);
+
+static int cmd_cmnd(const struct shell *sh, size_t argc, char **argv)
+{
+	static char pl[128];
+	static char out[1536];
+
+	if (argc < 2) {
+		shell_print(sh, "cmnd <Command> [payload]   (case-insensitive; no payload = query)");
+		cmnd_list(list_one, (void *)sh);
+		return 0;
+	}
+	k_mutex_lock(&cmnd_lock, K_FOREVER);
+	pl[0] = '\0';
+	for (size_t i = 2; i < argc; i++) {
+		if (i > 2) {
+			strncat(pl, " ", sizeof(pl) - strlen(pl) - 1);
+		}
+		strncat(pl, argv[i], sizeof(pl) - strlen(pl) - 1);
+	}
+	int err = cmnd_exec(argv[1], pl, out, sizeof(out));
+
+	shell_print(sh, "%s", out);
+	k_mutex_unlock(&cmnd_lock);
+	return err == -ENOENT ? -ENOEXEC : 0;
+}
+SHELL_CMD_ARG_REGISTER(cmnd, NULL, "Tasmota-style command, as over MQTT: cmnd <Command> [payload]",
+		       cmd_cmnd, 1, 30);
 
 SHELL_STATIC_SUBCMD_SET_CREATE(pump_cmds,
 	SHELL_CMD(status, NULL, "Controller, sensors and pump state", cmd_status),

@@ -1,6 +1,6 @@
 # Quiet Condensate Peristaltic Pump — Design Document
 
-Status: **draft v0.11** (2026-11-27) — requirements, concept, CAD v1 (`cad/`), electronics ([electronics.md](electronics.md)) and assembly instructions ([assembly/](assembly/README.md)).
+Status: **draft v0.12** (2026-11-28) — requirements, concept, CAD v1 (`cad/`), electronics ([electronics.md](electronics.md)) and assembly instructions ([assembly/](assembly/README.md)).
 This file is the single source of truth for the project and will evolve until
 the working prototype. Values marked **[TBC]** are assumptions waiting for a
 measurement or confirmation; see [Open questions](#11-open-questions).
@@ -592,8 +592,8 @@ EMERGENCY (+120 s) → PROBLEM (+165 s), as in the host test.
 - **Logging**: console log backends only (UART / host stdout), with the
   shell's log backend off. Otherwise every line prints twice or the boot log
   is lost.
-- **Next**: M2 adds Wi-Fi provisioning (`wifi_prov`), MQTT + HA discovery and
-  the night-mode schedule (NTP); M3 adds the TMC2209 UART module.
+- **Next**: M2 (Wi-Fi, MQTT + HA discovery, night mode) is done, see below;
+  M3 adds the TMC2209 UART module.
 - **To check on the bench**:
   - sensor polarity (Q2; the overlay assumes NPN, wet = low);
   - rotor direction;
@@ -641,28 +641,109 @@ plan in section 5.1:
 timer group) rather than work-queue timing. Speeds are < 10 kHz, but jitter at
 2–20 RPM is audible.
 
-#### MQTT + Home Assistant discovery
+#### MQTT + Home Assistant discovery (M2, 2026-11-28)
 
-- Discovery publishes retained configs to
-  `homeassistant/<component>/<node_id>/<object_id>/config`.
-- The availability topic uses LWT (`online` / `offline`).
-- State is published as JSON on a single state topic. Commands come from
-  `.../set` topics.
+Built and tested; details and the command list in `firmware/README.md`.
 
-Proposed entities:
+**Isolation from the control loop.** The control loop (`main`, priority 0)
+never waits on the network:
 
-| Entity | HA type | Notes |
-|--------|---------|-------|
-| Level low / Level high | binary_sensor (moisture) | |
-| Pump state | sensor (enum) | idle / fill / drain / emergency / fault |
-| Inflow estimate | sensor, L/h | the AC condensate production |
-| Pump flow, pump speed | sensor, L/h and RPM | |
-| Water pumped total | sensor, L, `total_increasing` | |
-| Problem | binary_sensor (problem) | triggers the future AC shutdown automation |
-| Hose revolutions / hose wear % | sensor | button "hose replaced" resets it |
-| k_lo, k_hi, V_rev, night cap, timeouts | number | tuning, persisted in NVS |
-| Calibrate, purge, test alarm | button | |
-| TMC2209 status | sensor (diagnostic) | |
+- it publishes a status snapshot under a spinlock (a struct copy);
+- it posts edges (level sensors, state, alarms) to a queue without waiting;
+  when MQTT is down the queue fills and further edges are dropped and counted.
+  On reconnect everything is republished from a fresh snapshot;
+- flash writes (q̂, counters) and reboots go to a low-priority work queue.
+  In M1 the control loop wrote to flash itself;
+- requests from the shell/MQTT are flags it reads on its next tick;
+- a 3 s task watchdog (hardware fallback on the C3) resets the chip if the
+  loop ever stalls.
+
+The network thread (priority 10) owns Wi-Fi, NTP and the MQTT session.
+
+**Topics: Tasmota layout.** `<t>` defaults to `condpump_<last 3 MAC bytes>`.
+
+| Topic | Content |
+|-------|---------|
+| `tele/<t>/LWT` | `Online` / `Offline`, retained, last will |
+| `tele/<t>/SENSOR` | pump JSON. Sent on change, at most 1/s (any flow change ≥ 10 mL/h or 2 %), plus every `tele_period_s` (60 s) |
+| `tele/<t>/STATE` | diagnostics: uptime, RSSI, IP, version, time |
+| `stat/<t>/LOW`, `HIGH`, `PROBLEM`, `SFAULT`, `HOSE`, `MANUAL`, `NIGHT` | `ON`/`OFF`, retained, one message per edge, in order |
+| `stat/<t>/STATE` | controller state name, retained, per edge |
+| `stat/<t>/PARAMS` | all tunables, retained, on change |
+| `cmnd/<t>/<Command>` → `stat/<t>/RESULT` | Tasmota-style commands, JSON result |
+
+Commands are case-insensitive, and an empty payload queries the value. The same
+table serves the shell (`cmnd <Command> [payload]`). It covers:
+
+- every tunable by name;
+- network settings: `MqttHost`, `MqttPort`, `MqttUser`, `MqttPassword`,
+  `Topic`, `Discovery`, `DiscoveryPrefix`, `NtpServer`. The session reconnects
+  by itself after a change;
+- Wi-Fi: `SSId` / `Password` (applied at the restart), and `WifiConfig 2`
+  (reboot into the portal);
+- actions: `Manual`, `Auto`, `Purge`, `Calibrate`, `CalibrateMl`,
+  `HoseReplaced`, `TestAlarm`, `Save`, `Restart 1`;
+- `Status`, `Params`, `Time`, `Backlog`;
+- the Tasmota aliases `TelePeriod` and `Timezone`.
+
+**HA entities (60)**, all accepted by HA 2026.11 in a test:
+
+- **Sensors**:
+  - pump flow, commanded flow, rotor RPM, inflow estimate q̂, last measured
+    inflow (all `measurement`, so HA graphs them);
+  - water pumped (`water`, `total_increasing`, so it can feed HA's water
+    dashboard);
+  - hose revolutions, hose wear %, controller state (`enum`);
+  - diagnostics: boosts, emergencies, measurements, Wi-Fi RSSI (with STATE as
+    attributes), uptime, IP.
+- **Binary sensors**:
+  - level low/high (`moisture`), from the edge topics. HA's history shows
+    every wet/dry transition;
+  - problem, sensor fault, hose worn (`problem`);
+  - manual override, night cap active;
+  - raw (undebounced) low/high, disabled by default.
+- **Buttons**: hose replaced, purge 1 min, calibrate (20 rev), automatic
+  mode, test alarm, restart.
+- **Numbers**: the 26 numeric tunables, manual flow, calibration volume.
+- **Switches**: night schedule, quiet now.
+
+`homeassistant/status` = `online` (HA restarted) triggers a full republish.
+`Discovery 0` removes the entities.
+
+**Network configuration without a cable** (all three end up in the same
+settings):
+
+1. **Captive portal**. AP `Condpump-XXXXXX`, http://192.168.4.1. It sets the
+   Wi-Fi network plus the MQTT broker, port, user, password and topic. It opens:
+   - on first boot;
+   - after `WifiConfig 2`;
+   - after holding the button for 5 s.
+
+   If the stored network fails (for example, the router is still booting after
+   a power cut), it opens for 5 min and then the station is retried, forever.
+   `hello_eink`'s version stayed in AP mode for good.
+2. **MQTT**: the `cmnd` topics above.
+3. **Shell**: USB, and telnet (port 23) on the C3.
+
+**Night mode.** It uses the NTP time (`NtpServer`) and the `tz_h` tunable
+(−3, Curitiba, no DST). The night cap applies when `quiet` is set, or when
+`night_sched` is set and the local time is in [`night_start_h`,
+`night_end_h`). The emergency speed is never capped.
+
+**Calibration** (§6.4): `Calibrate <rev>` turns that many revolutions at
+3 L/h, measured from the motor position, then stops. `CalibrateMl <mL>` sets
+`v_rev_ml` = mL / revolutions turned.
+
+**Button**: a short press silences the alarm buzzer for 1 h; holding it 5 s
+opens the portal.
+
+**Security**: no authentication beyond the broker's. Anyone on the LAN can use
+the telnet shell and the `cmnd` topics, as with Tasmota. MQTT runs without TLS.
+
+**Not done yet**:
+- periodic exercise (§6.4);
+- TMC2209 status (M3, UART);
+- the AC shutdown automation (on the HA side, triggered by `Problem`).
 
 ## 7. Noise checklist
 
@@ -786,3 +867,4 @@ Proposed entities:
 | 2026-11-25 | 0.9 | Electronics: 5 × 7 cm perfboard layout and connections, through-hole protection parts, sensor input network for NPN/push-pull/PNP, bring-up procedure (`electronics.md`). Printed housing on the pump's back wall (`cad/electronics.py`). LEGO-style assembly instructions rendered from the CAD (`docs/assembly/`) |
 | 2026-11-27 | 0.10 | Firmware bootstrap prep. The repo becomes the inner project in `zephyr_container/workspace/projects/` (Q13 decided: `firmware/` here). The container is upgraded to Zephyr **v4.5.0** (`41d10b59`) and the image is built on pcut. C3 board, `adi,tmc2209` (still GPIO-only) and MQTT re-verified on v4.5.0. 2 of `hello_eink`'s patches are obsolete (one fixed upstream, one replaced by an upstream feature) |
 | 2026-11-27 | 0.11 | **Firmware v1 (M1)** in `firmware/`: control loop, TMC2209 step/dir on a hardware timer, debounced sensors, settings/NVS, shell, native_sim reservoir simulator, gcc-only closed-loop tests. §6.3 rewritten from the tests: shorter escalation (81 mL above H), H-rewet/L-redry bounds on q̂, a 50 mL volume budget below L, a latched sensor fault, and a night cap that never blocks draining. Dev image: SDK fetched with curl or from a local `sdk-cache/`, because the lab network resets GitHub release downloads |
+| 2026-11-28 | 0.12 | **Firmware M2**: MQTT + Home Assistant discovery (60 entities, Tasmota topic layout) in a network thread that never blocks the control loop, with edge topics for the level sensors. Tasmota-style commands shared by MQTT and the shell (tunables, network, Wi-Fi, calibration, purge, restart). The captive portal also takes the MQTT settings and times out, so a power cut cannot strand the pump in AP mode. Also: telnet shell, NTP night schedule, calibration routine, buzzer mute button, task watchdog; flash writes moved off the control loop. Tested on native_sim against Mosquitto and Home Assistant 2026.11 |

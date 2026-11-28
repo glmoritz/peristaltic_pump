@@ -1,0 +1,31 @@
+config WIFI_PROV
+	bool "Wi-Fi provisioning module"
+	select WIFI
+	select NET_MGMT
+	select NET_MGMT_EVENT
+	select NET_L2_WIFI_MGMT
+	select NET_SOCKETS
+	select NET_DHCPV4_SERVER
+	select FLASH
+	select FLASH_MAP
+	select NVS
+	help
+	  Wi-Fi station with stored credentials, and a captive portal on a
+	  temporary access point to enter them. Derived from hello_eink.
+
+if WIFI_PROV
+
+config WIFI_PROV_NAME
+	string "Device name in the portal and the AP SSID prefix"
+	default "Device"
+
+config WIFI_PROV_AP_TIMEOUT_S
+	int "Portal timeout when credentials exist (s, 0 = never)"
+	default 300
+	help
+	  When stored credentials fail (the router is still booting after a
+	  power cut, say), the portal opens for this long and then the
+	  station is tried again, forever. Without stored credentials the
+	  portal stays open until it gets some.
+
+endif

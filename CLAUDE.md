@@ -17,11 +17,13 @@ behind the AC indoor unit.
 - `pump_dimensions.png`: drawing of the Masterflow 20 (low resolution, values
   read in design.md §4.6).
 
-## State (2026-11-27)
+## State (2026-11-28)
 
-- Phase: **prototype v1 fully designed, nothing printed yet. Firmware M1
-  done** (local control, simulator, shell; builds for the C3 and native_sim).
-  Design doc v0.11.
+- Phase: **prototype v1 fully designed, nothing printed yet. Firmware M1 + M2
+  done**: local control, simulator, shell, and Wi-Fi portal, MQTT + HA
+  discovery, Tasmota-style commands and night mode. It builds for the C3 and
+  native_sim; M2 is tested on native_sim against Mosquitto and HA. Design doc
+  v0.12.
   - CAD (`cad/`): pump head, reservoir, and the electronics housing on the
     pump's back wall.
   - Electronics: `docs/electronics.md`, a 5 × 7 cm perfboard with its layout
@@ -76,8 +78,20 @@ behind the AC indoor unit.
   - Build in the container: `west build -b esp32c3_supermini|native_sim`.
     The simulator runs with `zephyr.exe -uart_stdinout` and the `sim …`
     commands.
-  - M2 (Wi-Fi + MQTT/HA discovery, written new) and M3 (TMC2209 UART) are
-    next.
+  - M2 is done (design.md §6.5, firmware/README.md). Rule: the control loop
+    (`main`) never blocks. Observers only get `app.h` (spinlock snapshot,
+    event queue without waiting), and flash writes and reboots go to the `store`
+    work queue. Keep it that way.
+  - M3 (TMC2209 UART) is next. Wi-Fi, the portal and the watchdog have not
+    run on the real C3 yet.
+  - Testing MQTT on pcut (containers removed after the test, easy to recreate):
+    - put the dev image (with `sleep infinity`), `eclipse-mosquitto:2` (named
+      `pumpmqtt`, run with `-c /mosquitto-no-auth.conf`) and
+      `home-assistant:stable` on one docker network;
+    - HA's config, with the MQTT entry pre-seeded, is in `~/pumptest/ha`;
+    - native_sim uses offloaded sockets, so `cmnd MqttHost pumpmqtt` just
+      works. Check the result in HA's `.storage/core.entity_registry` and the
+      `states` table of `home-assistant_v2.db`.
 - Next steps:
   1. The user prints and tests the pump head (torque test, choose the gap
      insert) and the reservoir (watertightness). Feed the results back into
@@ -85,8 +99,7 @@ behind the AC indoor unit.
   2. The user solders the perfboard (docs/electronics.md). Verify the [TBC]
      pin orders against the module silkscreens and the perfboard hole
      inset/diameter.
-  3. Firmware M2: copy `wifi_prov` from hello_eink, add MQTT + HA discovery
-     (entities in design.md §6.5) and night mode (NTP).
+  3. Firmware M3: TMC2209 UART (current, StallGuard, DRV_STATUS → HA).
   4. On the bench: sensor polarity (Q2), rotor direction, V_rev calibration
      (firmware/README.md).
 
@@ -119,7 +132,10 @@ behind the AC indoor unit.
   4.5.0-dev (`fbfc5f19`) images on pccasa were deleted.
   - The SDK is fetched with curl and only these toolchains are installed:
     arm, riscv64, xtensa esp32/s2/s3 (ARG `ZEPHYR_SDK_TOOLCHAINS`).
-  - **The lab network (pcut) resets many GitHub release-asset downloads.**
+  - **The lab network (pcut) resets many GitHub downloads.** The current
+    image lost `hal_espressif` blob `esp32s3/libphy.a`; it was fetched on
+    pccasa and committed into `zephyr-moritz:4.5.0` (2026-11-28). The
+    Dockerfile now fails the build when a blob is missing.
     Download the SDK files on pccasa and put them in `sdk-cache/` in the
     build context; the Dockerfile uses them and checks sha256.
   - Building by hand on pcut:

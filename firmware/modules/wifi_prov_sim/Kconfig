@@ -1,0 +1,14 @@
+config WIFI_PROV
+	bool "Wi-Fi provisioning (native_sim stub)"
+	default y
+	help
+	  Stub for native_sim, where the network is the host's (offloaded
+	  sockets): wifi_prov_start() announces CONNECTED after a short delay.
+
+if WIFI_PROV
+
+config WIFI_PROV_NAME
+	string "Device name"
+	default "Device"
+
+endif
